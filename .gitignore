@@ -1,0 +1,8 @@
+.DS_Store
+augmented_yokai.zip
+jap-art.tar.gz
+__pycache__/cdcgan.cpython-312.pyc
+__pycache__/dataset.cpython-312.pyc
+__pycache__/dcgan.cpython-312.pyc
+__pycache__/vae.cpython-312.pyc
+jap-art/*/*.jpg
