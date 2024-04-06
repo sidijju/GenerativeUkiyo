@@ -6,3 +6,4 @@ __pycache__/dataset.cpython-312.pyc
 __pycache__/dcgan.cpython-312.pyc
 __pycache__/vae.cpython-312.pyc
 jap-art/*/*.jpg
+train
