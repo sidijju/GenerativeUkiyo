@@ -13,6 +13,8 @@ import torchvision.utils as vutils
 from tqdm import tqdm
 from datetime import datetime
 
+from utils import *
+
 ##### DCGAN #####
 
 class DCGAN:
@@ -33,10 +35,8 @@ class DCGAN:
         if self.args.train:
             self.run_dir = "train/gan-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
             self.progress_dir = self.run_dir + "progress/"
-            if not os.path.exists(self.run_dir):
-                os.makedirs(self.run_dir)
-            if not os.path.exists(self.progress_dir):
-                os.makedirs(self.progress_dir)
+            make_dir(self.run_dir)
+            make_dir(self.progress_dir)
         
     def train(self, 
             num_epochs = 5,
@@ -49,14 +49,14 @@ class DCGAN:
             return
         
         d_net = Discriminator(self.args, self.channel_size)
-        d_net.apply(self.weights_init)
+        d_net.apply(weights_init)
         d_net.to(self.args.device)
         d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr, betas=(0.5, 0.999))
         if self.args.fm_on:
             d_net.l1.register_forward_hook(d_net.feature_activations)
 
         g_net = Generator(self.args, self.channel_size, self.latent_size)
-        g_net.apply(self.weights_init)
+        g_net.apply(weights_init)
         g_net.to(self.args.device)
         g_optimizer = optim.Adam(g_net.parameters(), lr=g_lr, betas=(0.5, 0.999))
 
@@ -69,7 +69,6 @@ class DCGAN:
         real_label = 0.9
         fake_label = 0.
 
-        images = []
         d_losses_real = []
         d_losses_fake = []
         g_losses = []
@@ -84,10 +83,7 @@ class DCGAN:
                 batchsize = batch.shape[0]
 
                 if iters == 0:
-                    images.append(vutils.make_grid(batch.cpu()[:25], nrow = 5, padding=2, normalize=True))
-                    plt.axis('off')
-                    plt.imshow(images[-1].permute(1, 2, 0))
-                    plt.savefig(self.progress_dir + f"train_example")
+                    plot_batch(batch, self.progress_dir + f"train_example")
 
                 # generate fake batch for training
                 noise = torch.randn(batchsize, self.latent_size, 1, 1, device=self.args.device)
@@ -163,11 +159,8 @@ class DCGAN:
                 if (iters % 5000 == 0) or ((epoch == num_epochs-1) and (i == len(self.dataloader)-1)):
 
                     with torch.no_grad():
-                        fake = g_net(fixed_latent).detach().cpu()
-                    images.append(vutils.make_grid(fake[:25], nrow = 5, padding=2, normalize=True))
-                    plt.axis('off')
-                    plt.imshow(images[-1].permute(1, 2, 0))
-                    plt.savefig(self.progress_dir + f"iter:{iters}")
+                        fake = g_net(fixed_latent).detach()
+                    plot_batch(fake, self.progress_dir + f"iter:{iters}")
 
                 iters += 1
 
@@ -191,48 +184,23 @@ class DCGAN:
         plt.savefig(self.run_dir + "train_losses")
                 
     def generate(self, path, n = 5):
-        d_net = Discriminator(self.args, self.channel_size)
         g_net = Generator(self.args, self.channel_size, self.latent_size)
-        
-
-        d_net.load_state_dict(torch.load(path + "/discriminator.pt"))
         g_net.load_state_dict(torch.load(path + "/generator.pt"))
-
-        d_net.to(self.args.device)
         g_net.to(self.args.device)
-
-        d_net.eval()
         g_net.eval()
 
         noise = torch.randn(n, self.latent_size, 1, 1, device=self.args.device)
 
-        batch, labels = next(iter(self.dataloader))
+        batch, _ = next(iter(self.dataloader))
         batch = batch.to(self.args.device)
-        labels = labels.to(self.args.device)
 
         with torch.no_grad():
-            fake_batch = g_net(noise)
-            fake_output = d_net(fake_batch).view(-1)
-            real_output = d_net(batch).view(-1)
+            fake = g_net(noise)
 
         for i in range(n):
-            plt.imshow(batch[i].cpu().permute(1, 2, 0))
-            plt.savefig(path + f"/r_{i}")
-            plt.imshow(fake_batch[i].cpu().permute(1, 2, 0))
-            plt.savefig(path + f"/f_{i}")
+            plot_image(batch[i], path + f"/r_{i}")
+            plot_image(fake[i], path + f"/f_{i}")
 
-    # utility function to iterate through model
-    # and initalize weights in layers rom N(0, 0.02)
-    def weights_init(self, model):
-        classname = model.__class__.__name__
-        if classname.find('Conv') != -1:
-            nn.init.normal_(model.weight.data, 0.0, 0.02)
-        elif classname.find('BatchNorm') != -1:
-            nn.init.normal_(model.weight.data, 1.0, 0.02)
-            nn.init.constant_(model.bias.data, 0)
-        elif classname.find('ConvTranspose2d') != -1:
-            nn.init.normal_(model.weight.data, 0.0, 0.02)
-            nn.init.constant_(model.bias.data, 0)
 ###############
             
 ####   Generator   #####
