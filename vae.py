@@ -1,12 +1,10 @@
-import os
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import torch.nn.utils.parametrizations as P
 import torch.optim as optim
-import torchvision.utils as vutils
 from tqdm import tqdm
 from datetime import datetime
+
+from utils import *
 
 ##### VAE #####
 
@@ -28,10 +26,8 @@ class VAE:
         if self.args.train:
             self.run_dir = "train/vae-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
             self.progress_dir = self.run_dir + "progress/"
-            if not os.path.exists(self.run_dir):
-                os.makedirs(self.run_dir)
-            if not os.path.exists(self.progress_dir):
-                os.makedirs(self.progress_dir)
+            make_dir(self.run_dir)
+            make_dir(self.progress_dir)
         
     def train(self, 
             num_epochs = 50,
@@ -43,14 +39,13 @@ class VAE:
             return
         
         vae = VariationalAutoEncoder(self.args, self.channel_size)
-        vae.apply(self.weights_init)
+        vae.apply(weights_init)
         vae.to(self.args.device)
         optimizer = optim.Adam(vae.parameters(), lr=lr, betas=(0.5, 0.999))
 
         fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
         bce = nn.BCELoss(reduction='sum')
 
-        images = []
         losses = []
         iters = 0
 
@@ -62,10 +57,7 @@ class VAE:
                 batchsize = batch.shape[0]
 
                 if iters == 0:
-                    images.append(vutils.make_grid(batch.cpu()[:25], nrow = 5, padding=2, normalize=True))
-                    plt.axis('off')
-                    plt.imshow(images[-1].permute(1, 2, 0))
-                    plt.savefig(self.progress_dir + f"train_example")
+                    plot_batch(batch, self.progress_dir + f"train_example")
 
                 vae.zero_grad()
                 batch_hat, mu, logvar = vae(batch)
@@ -76,7 +68,7 @@ class VAE:
                 # KL divergence loss
                 kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-                loss = reproduction_loss + kl_loss
+                loss = (reproduction_loss + kl_loss)/2
                 loss.backward()
                 optimizer.step()
 
@@ -95,10 +87,7 @@ class VAE:
 
                     with torch.no_grad():
                         fake = vae.decode(fixed_latent).detach().cpu()
-                    images.append(vutils.make_grid(fake[:25], nrow = 5, padding=2, normalize=True))
-                    plt.axis('off')
-                    plt.imshow(images[-1].permute(1, 2, 0))
-                    plt.savefig(self.progress_dir + f"iter:{iters}")
+                    plot_batch(fake, self.progress_dir + f"iter:{iters}")
 
                 iters += 1
 
@@ -134,20 +123,9 @@ class VAE:
             fake_batch = vae.decode(noise)
 
         for i in range(n):
-            plt.imshow(batch[i].cpu().permute(1, 2, 0))
-            plt.savefig(path + f"/r_{i}")
-            plt.imshow(fake_batch[i].cpu().permute(1, 2, 0))
-            plt.savefig(path + f"/f_{i}")
+            plot_image(batch[i], path + f"/r_{i}")
+            plot_image(fake_batch[i], path + f"/r_{i}")
 
-    # utility function to iterate through model
-    # and initalize weights in layers rom N(0, 0.02)
-    def weights_init(self, model):
-        classname = model.__class__.__name__
-        if classname.find('Conv') != -1:
-            nn.init.normal_(model.weight.data, 0.0, 0.02)
-        elif classname.find('BatchNorm') != -1:
-            nn.init.normal_(model.weight.data, 1.0, 0.02)
-            nn.init.constant_(model.bias.data, 0)
 ###############
 
 class VariationalAutoEncoder(nn.Module):
