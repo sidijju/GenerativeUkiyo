@@ -14,19 +14,22 @@ from vae import VAE
 from dataset import JapArtDataset
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--vae', action='store_true', help="train and use vae model")
 parser.add_argument('--train', action='store_true', help='Set training mode to true')
+
+parser.add_argument('-n', '--n', type=int, default=5, help='number of training epochs')
 parser.add_argument('--seed', type=int, default=128, help='Manual random seed')
 parser.add_argument('--batchsize', type=int, default=64, help='Batch size')
 parser.add_argument('--latent', type=int, default=100, help='size of latent')
+parser.add_argument('--img_dim', type=int, default=128, help='output image dimension')
 parser.add_argument('--fm_on', action='store_true', help='Turn feature matching on')
-parser.add_argument('-n', '--n', type=int, default=5, help='number of training epochs')
+parser.add_argument('--cond', action='store_true', help='train conditional GAN using labels')
+parser.add_argument('--flip', action='store_true', help='flip label in gan for better gradient flow')
+
 parser.add_argument('--augment', action='store_true', help='augment dataset')
 parser.add_argument('--new_dir', type=str, default='./augment/', help='directory to store after augment')
-parser.add_argument('--img_dim', type=int, default=128, help='output image dimension')
-parser.add_argument('--cond', action='store_true', help='train conditional GAN using labels')
-parser.add_argument('--flip', action='store_true', help='flip label for better gradient flow')
 parser.add_argument('--path', type=str, default='train/discriminator', help='Path to folder with d and g weights')
-parser.add_argument('--vae', action='store_true', help="train and use vae model")
+
 args = parser.parse_args()
 
 if args.train:
