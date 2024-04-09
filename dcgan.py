@@ -3,13 +3,11 @@
 # https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
 # https://arxiv.org/abs/1606.03498
 #####################
-import os
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.utils.parametrizations as P
 import torch.optim as optim
-import torchvision.utils as vutils
 from tqdm import tqdm
 from datetime import datetime
 
@@ -43,17 +41,14 @@ class DCGAN:
             g_lr = .0001,
             d_lr = .0004):
 
-        assert self.args.train
-
-        if not self.dataloader:
-            return
+        assert self.args.train and self.dataloader
         
         d_net = Discriminator(self.args, self.channel_size)
         d_net.apply(weights_init)
         d_net.to(self.args.device)
         d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr, betas=(0.5, 0.999))
         if self.args.fm_on:
-            d_net.l1.register_forward_hook(d_net.feature_activations)
+            d_net.model.register_forward_hook(d_net.feature_activations)
 
         g_net = Generator(self.args, self.channel_size, self.latent_size)
         g_net.apply(weights_init)
