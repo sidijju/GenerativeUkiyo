@@ -54,10 +54,7 @@ class CDCGAN(GAN):
                 batchsize = batch.shape[0]
 
                 if iters == 0:
-                    images.append(vutils.make_grid(batch.cpu(), padding=2, normalize=True))
-                    plt.axis('off')
-                    plt.imshow(images[-1].permute(1, 2, 0))
-                    plt.savefig(self.progress_dir + f"train_example")
+                    plot_batch(batch, self.progress_dir + f"train_example")
 
                 # generate fake batch for training
                 noise = torch.randn(batchsize, self.latent_size, 1, 1, device=self.args.device)

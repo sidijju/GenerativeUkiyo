@@ -1,9 +1,5 @@
 import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
-import torch.nn.utils.parametrizations as P
-import torch.optim as optim
-from tqdm import tqdm
 from datetime import datetime
 from abc import ABC
 from utils import *
