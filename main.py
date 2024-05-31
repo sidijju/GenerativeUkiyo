@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from models.dc_gan import DCGAN
 from models.cdc_gan import CDCGAN
 from models.vae import VAE
+from models.ddpm import DDPM
 from dataset import JapArtDataset
 
 parser = argparse.ArgumentParser()
@@ -25,8 +26,9 @@ parser.add_argument('--dim', type=int, default=128, help='output image dimension
 
 ### Model Flags
 
-parser.add_argument('--vae', action='store_true', help="train vae model")
+parser.add_argument('--vae', action='store_true', help='train vae model')
 parser.add_argument('--cond', action='store_true', help='train conditional GAN using labels')
+parser.add_argument('--ddpm', action='store_true', help='train denoising diffusion probablistic model')
 
 ### Dataset Flags
 
@@ -42,6 +44,9 @@ parser.add_argument('--weights', type=str, default='train/run', help='path to fo
 
 parser.add_argument('--fm', action='store_true', help='turn feature matching on for GANs')
 parser.add_argument('--flip', action='store_true', help='flip label in GANs for better gradient flow')
+parser.add_argument('--t', type=int, default=1000, help='noise timesteps for ddpm')
+parser.add_argument('--b_0', type=float, default=1e-4, help='beta at timestep 0 for ddpm')
+parser.add_argument('--b_t', type=float, default=0.02, help='beta at timestep t for ddpm')
 
 args = parser.parse_args()
 
@@ -83,8 +88,6 @@ if args.augment:
                 v2.RandomRotation(30, fill=1),
                 v2.RandomResizedCrop(720),
                 v2.RandomPerspective(distortion_scale = 0.25, p=1.0, fill=1.0),
-                #v2.AutoAugment(),
-                #v2.RandAugment(2),
             ]
 
             for i, transform in enumerate(augment_transforms):
@@ -101,12 +104,17 @@ else:
 
 args.num_classes = len(dataset.labels_map)
 
+# assuming channels first dataset
+args.channel_size = len(dataset[0][0])
+
 dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
 
-if args.cond:
-    model = CDCGAN(args, dataloader)
+if args.ddpm:
+    model = DDPM(args, dataloader)
 elif args.vae:
     model = VAE(args, dataloader)
+elif args.cond:
+    model = CDCGAN(args, dataloader)
 else:
     model = DCGAN(args, dataloader)
 

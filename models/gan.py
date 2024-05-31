@@ -10,13 +10,12 @@ class GAN(ABC):
                 args,
                 dataloader = None,
                 workers = 2,
-                channel_size = 3,
                 ):
         
         self.args = args
         self.dataloader = dataloader
         self.workers = workers
-        self.channel_size = channel_size
+        self.channel_size = args.channel_size
         self.latent_size = args.latent
 
         if not self.args.test:

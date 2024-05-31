@@ -40,6 +40,8 @@ and specify the directory with pretrained weights to `--weights`
 
 `--cond` - train conditional DCGAN with category labels
 
+`--ddpm` - train denoising diffusion probabilistic model
+
 ### Dataset Flags
 
 `--augment` - run auto-augmentation on input dataset
@@ -57,3 +59,9 @@ and specify the directory with pretrained weights to `--weights`
 `--fm` - turn on feature matching objective for GANs from ["Improved Techniques for Training GANs"](https://arxiv.org/pdf/1606.03498)
 
 `--flip` - flip label for better gradient flow in early iterations of training
+
+`--t` - noise timesteps for ddpm
+
+`--b_0` - beta at timestep 0 for ddpm
+
+`--b_t` - beta at timestep t for ddpm
