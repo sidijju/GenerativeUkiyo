@@ -23,7 +23,7 @@ class VAE:
         self.channel_size = channel_size
         self.latent_size = args.latent
 
-        if self.args.train:
+        if not self.args.test:
             self.run_dir = "train/vae-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
             self.progress_dir = self.run_dir + "progress/"
             make_dir(self.run_dir)
@@ -32,8 +32,6 @@ class VAE:
     def train(self, 
             num_epochs = 50,
             lr = .0002):
-
-        assert self.args.train
 
         if not self.dataloader:
             return

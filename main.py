@@ -8,34 +8,47 @@ from torchvision.io import read_image
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 
-from dcgan import DCGAN
-from cdcgan import CDCGAN
-from vae import VAE
+from models.dc_gan import DCGAN
+from models.cdc_gan import CDCGAN
+from models.vae import VAE
 from dataset import JapArtDataset
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--vae', action='store_true', help="train and use vae model")
-parser.add_argument('--train', action='store_true', help='Set training mode to true')
+
+### General Flags
 
 parser.add_argument('-n', '--n', type=int, default=5, help='number of training epochs')
-parser.add_argument('--seed', type=int, default=128, help='Manual random seed')
-parser.add_argument('--batchsize', type=int, default=64, help='Batch size')
-parser.add_argument('--latent', type=int, default=100, help='size of latent')
-parser.add_argument('--img_dim', type=int, default=128, help='output image dimension')
-parser.add_argument('--fm_on', action='store_true', help='Turn feature matching on')
+parser.add_argument('--seed', type=int, default=128, help='manual random seed')
+parser.add_argument('--batchsize', type=int, default=64, help='batch size')
+parser.add_argument('--latent', type=int, default=100, help='size of latent dimension')
+parser.add_argument('--dim', type=int, default=128, help='output image dimension')
+
+### Model Flags
+
+parser.add_argument('--vae', action='store_true', help="train vae model")
 parser.add_argument('--cond', action='store_true', help='train conditional GAN using labels')
-parser.add_argument('--flip', action='store_true', help='flip label in gan for better gradient flow')
+
+### Dataset Flags
 
 parser.add_argument('--augment', action='store_true', help='augment dataset')
 parser.add_argument('--new_dir', type=str, default='./augment/', help='directory to store after augment')
-parser.add_argument('--path', type=str, default='train/discriminator', help='Path to folder with d and g weights')
+
+## Test Flags
+
+parser.add_argument('--test', default=False, action='store_true', help='set testing mode to true')
+parser.add_argument('--weights', type=str, default='train/run', help='path to folder with model weights')
+
+### Additional Flags
+
+parser.add_argument('--fm', action='store_true', help='turn feature matching on for GANs')
+parser.add_argument('--flip', action='store_true', help='flip label in GANs for better gradient flow')
 
 args = parser.parse_args()
 
-if args.train:
+if not args.test:
     random.seed(args.seed)
     torch.manual_seed(args.seed)
-    #torch.use_deterministic_algorithms(True)
+    torch.use_deterministic_algorithms(True)
 
 if (torch.cuda.is_available()):
     print("Using cuda")
@@ -97,8 +110,8 @@ elif args.vae:
 else:
     model = DCGAN(args, dataloader)
 
-if args.train:
+if not args.test:
     model.train(num_epochs=args.n)
     model.generate(model.run_dir)
 else:
-    model.generate(args.path)
+    model.generate(args.weights)

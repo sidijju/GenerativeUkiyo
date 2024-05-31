@@ -11,7 +11,7 @@ class JapArtDataset(Dataset):
             self.img_dir = args.new_dir
         else:
             self.img_dir = 'jap-art/'
-        self.img_dim = args.img_dim
+        self.dim = args.dim
         self.transform = transform
 
         self.img_names = []
@@ -40,9 +40,7 @@ class JapArtDataset(Dataset):
         label = torch.tensor(self.labels[idx], dtype=torch.int64)
         img = read_image(self.img_names[idx])
 
-        if img.shape[0] > 3:
-            print(self.img_names[idx])
-            print(img.shape)
+        assert img.shape[0] <= 3
 
         if self.transform:
             img = self.transform(img)
@@ -73,7 +71,7 @@ class JapArtDataset(Dataset):
                 v2.ToDtype(torch.float32, scale=True),
                 v2.Resize(size=(w, h)),
                 v2.Pad(pad, fill=1),
-                v2.Resize(self.img_dim),
+                v2.Resize(self.dim),
             ])
             img = transform(img)
             img = torch.clamp(img, 0, 1)
