@@ -1,47 +1,41 @@
-##### Resources #####
-# https://www.nichibun.ac.jp/en/db/category/yokaigazou/
-# https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
-# https://arxiv.org/abs/1606.03498
-#####################
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.utils.parametrizations as P
 import torch.optim as optim
 from tqdm import tqdm
-from datetime import datetime
-
+from models.gan import GAN
 from utils import *
 
 ##### DCGAN #####
 
-class DCGAN:
+class DCGAN(GAN):
 
-    def __init__(self, 
-                args,
-                dataloader = None,
-                workers = 2,
-                channel_size = 3,
-                ):
-        
-        self.args = args
-        self.dataloader = dataloader
-        self.workers = workers
-        self.channel_size = channel_size
-        self.latent_size = args.latent
+    def generate(self, path, n = 5):
+        g_net = Generator(self.args, self.channel_size, self.latent_size)
+        g_net.load_state_dict(torch.load(path + "/generator.pt"))
+        g_net.to(self.args.device)
+        g_net.eval()
 
-        if self.args.train:
-            self.run_dir = "train/gan-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
-            self.progress_dir = self.run_dir + "progress/"
-            make_dir(self.run_dir)
-            make_dir(self.progress_dir)
+        noise = torch.randn(n, self.latent_size, 1, 1, device=self.args.device)
+
+        batch, _ = next(iter(self.dataloader))
+        batch = batch.to(self.args.device)
+
+        with torch.no_grad():
+            fake = g_net(noise)
+
+        for i in range(n):
+            plot_image(batch[i], path + f"/r_{i}")
+            plot_image(fake[i], path + f"/f_{i}")
         
     def train(self, 
             num_epochs = 5,
             g_lr = .0001,
             d_lr = .0004):
 
-        assert self.args.train and self.dataloader
+        if not self.dataloader:
+            return
         
         d_net = Discriminator(self.args, self.channel_size)
         d_net.apply(weights_init)
@@ -161,41 +155,7 @@ class DCGAN:
 
         print("### End Training Procedure ###")
         self.save_train_data(d_losses_real, d_losses_fake, g_losses, d_net, g_net)
-
-    def save_train_data(self, d_losses_real, d_losses_fake, g_losses, d_net, g_net):
-
-        # save models
-        torch.save(d_net.state_dict(), self.run_dir + '/discriminator.pt')
-        torch.save(g_net.state_dict(), self.run_dir + '/generator.pt')
-
-        # save losses
-        plt.figure(figsize=(10,5))
-        plt.title("Training Losses")
-        plt.plot(g_losses,label="G")
-        plt.plot([sum(x)/2 for x in zip(d_losses_real, d_losses_fake)], label="D")
-        plt.xlabel("Iterations")
-        plt.ylabel("Loss")
-        plt.legend()
-        plt.savefig(self.run_dir + "train_losses")
                 
-    def generate(self, path, n = 5):
-        g_net = Generator(self.args, self.channel_size, self.latent_size)
-        g_net.load_state_dict(torch.load(path + "/generator.pt"))
-        g_net.to(self.args.device)
-        g_net.eval()
-
-        noise = torch.randn(n, self.latent_size, 1, 1, device=self.args.device)
-
-        batch, _ = next(iter(self.dataloader))
-        batch = batch.to(self.args.device)
-
-        with torch.no_grad():
-            fake = g_net(noise)
-
-        for i in range(n):
-            plot_image(batch[i], path + f"/r_{i}")
-            plot_image(fake[i], path + f"/f_{i}")
-
 ###############
             
 ####   Generator   #####

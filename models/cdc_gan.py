@@ -1,40 +1,15 @@
-##### Resources #####
-# https://www.nichibun.ac.jp/en/db/category/yokaigazou/
-# https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
-# https://arxiv.org/abs/1606.03498
-#####################
-import os
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.utils as vutils
 from tqdm import tqdm
-from datetime import datetime
+from models.gan import GAN
+from utils import *
 
 ##### CDCGAN #####
 
-class CDCGAN:
-
-    def __init__(self, 
-                args,
-                dataloader = None,
-                workers = 2,
-                channel_size = 3,
-                ):
-        
-        self.args = args
-        self.dataloader = dataloader
-        self.workers = workers
-        self.channel_size = channel_size
-        self.latent_size = args.latent
-
-        self.run_dir = "train/" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
-        self.progress_dir = self.run_dir + "progress/"
-        if not os.path.exists(self.run_dir):
-            os.makedirs(self.run_dir)
-        if not os.path.exists(self.progress_dir):
-            os.makedirs(self.progress_dir)
+class CDCGAN(GAN):
         
     def train(self, 
             num_epochs = 5,
@@ -44,14 +19,14 @@ class CDCGAN:
             return 
             
         d_net = Discriminator(self.args, self.channel_size)
-        d_net.apply(self.weights_init)
+        d_net.apply(weights_init)
         d_net.to(self.args.device)
         d_optimizer = optim.Adam(d_net.parameters(), lr=lr, betas=(0.5, 0.999))
         if self.args.fm:
             d_net.l1.register_forward_hook(d_net.feature_activations)
 
         g_net = Generator(self.args, self.channel_size, self.latent_size)
-        g_net.apply(self.weights_init)
+        g_net.apply(weights_init)
         g_net.to(self.args.device)
         g_optimizer = optim.Adam(g_net.parameters(), lr=lr, betas=(0.5, 0.999))
 
@@ -161,41 +136,9 @@ class CDCGAN:
                 iters += 1
         print("### End Training Procedure ###")
         self.save_train_data(d_losses_real, d_losses_fake, g_losses, d_net, g_net)
-
-
-    def save_train_data(self, d_losses_real, d_losses_fake, g_losses, d_net, g_net):
-
-        # save models
-        torch.save(d_net.state_dict(), self.run_dir + "discriminator")
-        torch.save(g_net.state_dict(), self.run_dir + "generator")
-
-        # save losses
-        plt.figure(figsize=(10,5))
-        plt.title("Training Losses")
-        plt.plot(g_losses,label="G")
-        plt.plot([sum(x) for x in zip(d_losses_real, d_losses_fake)], label="D")
-        #plt.plot(d_losses_real, label="D(x)")
-        #plt.plot(d_losses_fake, label="D(G(z))")
-        plt.xlabel("Iterations")
-        plt.ylabel("Loss")
-        plt.legend()
-        plt.savefig(self.run_dir + "train_losses")
                 
     def generate(self, n = 5):
         pass
-
-    # utility function to iterate through model
-    # and initalize weights in layers rom N(0, 0.02)
-    def weights_init(self, model):
-        classname = model.__class__.__name__
-        if classname.find('Conv') != -1:
-            nn.init.normal_(model.weight.data, 0.0, 0.02)
-        elif classname.find('BatchNorm') != -1:
-            nn.init.normal_(model.weight.data, 1.0, 0.02)
-            nn.init.constant_(model.bias.data, 0)
-        elif classname.find('ConvTranspose2d') != -1:
-            nn.init.normal_(model.weight.data, 0.0, 0.02)
-            nn.init.constant_(model.bias.data, 0)
 
 ###############
             
@@ -206,22 +149,18 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.args = args
 
+        ngf = 64
+
         self.embed = self.conv_block(latent_size, 1024, 4, stride=1, pad=0)
         self.label_embedding = self.conv_block(self.args.num_classes, 1024, 4, stride=1, pad=0)
 
         self.model = nn.Sequential(
-            # shape: (2048, 4, 4)
-            self.conv_block(2048, 1024, 4),
-            # shape: (1024, 8, 8)
-            self.conv_block(1024, 512, 4),
-            # shape: (512, 16, 16)
-            self.conv_block(512, 256, 4),
-            # shape: (256, 32, 32)
-            self.conv_block(256, 128, 4),
-            # shape: (128, 64, 64)
-            nn.ConvTranspose2d(128, channel_size, 4, 2, 1, bias=False),
+            self.conv_block(ngf * 32, ngf * 16, 4),
+            self.conv_block(ngf * 16, ngf * 8, 4),
+            self.conv_block(ngf * 8, ngf * 4, 4),
+            self.conv_block(ngf * 4, ngf * 2, 4),
+            nn.ConvTranspose2d(ngf * 2, channel_size, 4, 2, 1, bias=False),
             nn.Tanh()
-            # shape: (3, 128, 128)
         )
 
     def conv_block(self, input, output, kernel, stride=2, pad=1):
@@ -248,6 +187,8 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.args = args
 
+        ndf = 64
+
         self.label_embedding = nn.Sequential(
             nn.Linear(self.args.num_classes, 1024),
             nn.LeakyReLU(0.2, inplace=True),
@@ -257,22 +198,15 @@ class Discriminator(nn.Module):
         )
 
         self.l1 = nn.Sequential(
-            # shape: (4, 128, 128)
-            self.conv_block(channel_size + 1, 64, 4, batchnorm=False),
-            # shape: (64, 64, 64)
-            self.conv_block(64, 128, 4),
-            # shape: (128, 32, 32)
+            self.conv_block(channel_size + 1, ndf, 4, batchnorm=False),
+            self.conv_block(ndf, ndf * 2, 4),
         )
         self.l2 = nn.Sequential(
-            self.conv_block(128, 256, 4),
-            # shape: (256, 16, 16)
-            self.conv_block(256, 512, 4),
-            # shape: (512, 8, 8)
-            self.conv_block(512, 1024, 4),
-            # shape: (1024, 4, 4)
-            nn.utils.spectral_norm(nn.Conv2d(1024, 1, 4, 1, 0, bias=False)),
+            self.conv_block(ndf * 2, ndf * 4, 4),
+            self.conv_block(ndf * 4, ndf * 8, 4),
+            self.conv_block(ndf * 8, ndf * 16, 4),
+            nn.utils.spectral_norm(nn.Conv2d(ndf * 16, 1, 4, 1, 0, bias=False)),
             nn.Sigmoid()
-            # shape: (1024, 1, 1)
         )
 
     def conv_block(self, input, output, kernel, batchnorm=True):
