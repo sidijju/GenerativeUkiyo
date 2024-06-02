@@ -22,7 +22,6 @@ parser.add_argument('-n', '--n', type=int, default=5, help='number of training e
 parser.add_argument('--seed', type=int, default=128, help='manual random seed')
 parser.add_argument('--batchsize', type=int, default=64, help='batch size')
 parser.add_argument('--latent', type=int, default=100, help='size of latent dimension')
-parser.add_argument('--dim', type=int, default=128, help='output image dimension')
 
 ### Model Flags
 
@@ -106,6 +105,8 @@ args.num_classes = len(dataset.labels_map)
 
 # assuming channels first dataset
 args.channel_size = len(dataset[0][0])
+
+args.dim = 128
 
 dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
 

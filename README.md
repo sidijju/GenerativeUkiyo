@@ -32,8 +32,6 @@ and specify the directory with pretrained weights to `--weights`
 
 `--latent` - size of latent dimension
 
-`--dim` - output image dimension
-
 ### Model Flags
 
 `--vae` - train variational autoencoder 
