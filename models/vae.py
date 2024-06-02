@@ -160,7 +160,7 @@ class VariationalAutoEncoder(nn.Module):
             self.conv_transpose_block(nf * 4, nf * 2),
             self.conv_transpose_block(nf * 2, nf),
             nn.ConvTranspose2d(nf, 3, 4, 2, 1, bias=False),
-            nn.Sigmoid(),
+            nn.Tanh(),
         )
 
     def reparameterize(self, mu, logvar):
