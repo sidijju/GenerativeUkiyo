@@ -106,6 +106,7 @@ class VAE:
         plt.savefig(self.run_dir + "train_losses")
                 
     def generate(self, path, n = 5):
+        print("### Begin Generating Images ###")
         vae = VariationalAutoEncoder(self.args, self.channel_size)
         vae.load_state_dict(torch.load(path + "/vae.pt"))
         vae.to(self.args.device)
@@ -122,6 +123,7 @@ class VAE:
         for i in range(n):
             plot_image(batch[i], path + f"/r_{i}")
             plot_image(fake_batch[i], path + f"/r_{i}")
+        print("### Done Generating Images ###")
 
 ###############
 

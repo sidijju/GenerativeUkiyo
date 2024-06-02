@@ -11,6 +11,7 @@ from utils import *
 class DCGAN(GAN):
 
     def generate(self, path, n = 5):
+        print("### Begin Generating Images ###")
         g_net = Generator(self.args, self.channel_size, self.latent_size)
         g_net.load_state_dict(torch.load(path + "/generator.pt"))
         g_net.to(self.args.device)
@@ -27,6 +28,7 @@ class DCGAN(GAN):
         for i in range(n):
             plot_image(batch[i], path + f"/r_{i}")
             plot_image(fake[i], path + f"/f_{i}")
+        print("### Done Generating Images ###")
         
     def train(self, 
             num_epochs = 5,
