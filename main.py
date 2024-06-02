@@ -113,8 +113,8 @@ if args.ddpm:
     model = DDPM(args, dataloader)
 elif args.vae:
     model = VAE(args, dataloader)
-elif args.cond:
-    model = CDCGAN(args, dataloader)
+# elif args.cond:
+#     model = CDCGAN(args, dataloader)
 else:
     model = DCGAN(args, dataloader)
 
