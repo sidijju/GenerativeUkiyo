@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 from torchvision.io import read_image
+from utils import scale_image
 
 class JapArtDataset(Dataset):
 
@@ -75,5 +76,6 @@ class JapArtDataset(Dataset):
             ])
             img = transform(img)
             img = torch.clamp(img, 0, 1)
+            img = scale_image(img)
 
         return img, label

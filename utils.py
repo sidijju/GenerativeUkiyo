@@ -1,4 +1,5 @@
 import os
+import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
@@ -8,11 +9,14 @@ def make_dir(path):
         os.makedirs(path)
 
 def plot_image(image, path):
+    image = scale_image(image, inverse=True)
     plt.cla()
     plt.imshow(image.cpu().permute(1, 2, 0))
     plt.savefig(path)
 
 def plot_batch(batch, path):
+    for i in range(len(batch)):
+        batch[i] = scale_image(batch[i], inverse=True)
     plt.cla()
     grid = vutils.make_grid(batch.cpu()[:25], nrow = 5, padding=2, normalize=True)
     plt.axis('off')
@@ -31,3 +35,9 @@ def weights_init(model):
     elif classname.find('ConvTranspose2d') != -1:
         nn.init.normal_(model.weight.data, 0.0, 0.02)
         nn.init.constant_(model.bias.data, 0)
+
+# scale image from 0 - 1 to -1 - 1 and inverse
+def scale_image(image, inverse=False):
+    if inverse:
+        return torch.div(image + 1, 2)
+    return torch.mul(image, 2) - 1
