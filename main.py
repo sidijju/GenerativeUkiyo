@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-n', '--n', type=int, default=5, help='number of training epochs')
 parser.add_argument('--seed', type=int, default=128, help='manual random seed')
-parser.add_argument('--batchsize', type=int, default=64, help='batch size')
+parser.add_argument('--batchsize', type=int, default=32, help='batch size')
 parser.add_argument('--latent', type=int, default=100, help='size of latent dimension')
 
 ### Model Flags
@@ -63,6 +63,10 @@ else:
 
 ##### Dataset #####
 
+# hardcode to 128 by 128 images for now
+# TODO make this a parameter
+args.dim = 128
+
 if args.augment:
     if not os.path.exists(args.new_dir):
         os.makedirs(args.new_dir)
@@ -101,12 +105,9 @@ if args.augment:
 else:
     dataset = JapArtDataset(args)
 
-args.num_classes = len(dataset.labels_map)
-
 # assuming channels first dataset
 args.channel_size = len(dataset[0][0])
-
-args.dim = 128
+args.num_classes = len(dataset.labels_map)
 
 dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
 

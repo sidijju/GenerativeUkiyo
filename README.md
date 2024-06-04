@@ -10,6 +10,11 @@ The art of woodblock printing has flourished since at least the 1700s in Japan. 
 
 ## Implemented Features
 
+### Diffusion
+
+- ResNet blocks in U-Net replaced with ConvNeXt blocks ["A ConvNet for the 2020s"](https://arxiv.org/abs/2201.03545)
+- GELU is used in place of SiLU
+
 ### GANs
 
 - Spectral normalization on discriminator layers
