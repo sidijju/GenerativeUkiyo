@@ -41,7 +41,7 @@ class VAE:
         optimizer = optim.Adam(vae.parameters(), lr=lr, betas=(0.5, 0.999))
 
         fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
-        mse = nn.MSELoss(reduction='sum')
+        mse = nn.MSELoss()
 
         losses = []
         iters = 0
@@ -76,7 +76,7 @@ class VAE:
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\tr_loss: %.4f\tkl_loss: %.4f\tloss: %.4f'
                         % (epoch, num_epochs, i, len(self.dataloader),
-                            reproduction_loss.item() / batchsize, kl_loss.item(), loss.item()))
+                            reproduction_loss.item(), kl_loss.item(), loss.item()))
 
                 losses.append(loss.item())
 
