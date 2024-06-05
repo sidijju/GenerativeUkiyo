@@ -37,10 +37,10 @@ class DDPM:
         self.b_0 = self.args.b_0
         self.b_t = self.args.b_t
         self.t = self.args.t
-        self.beta = torch.linspace(self.args.b_0, self.args.b_t, self.args.t)
+        self.beta = torch.linspace(self.args.b_0, self.args.b_t, self.args.t, device=self.args.device)
         self.alpha = 1 - self.beta
-        self.alpha_bar = torch.cumprod(self.alpha, dim=0)
-        self.alpha_bar_prev = torch.roll(self.alpha_bar, 1, 0)
+        self.alpha_bar = torch.cumprod(self.alpha, dim=0).to(self.args.device)
+        self.alpha_bar_prev = torch.roll(self.alpha_bar, 1, 0).to(self.args.device)
         self.alpha_bar_prev[0] = 1.0
         
         # noise coefficients
@@ -54,7 +54,7 @@ class DDPM:
     def noise_t(self, x, t):
         sqrt_alpha_bar = self.__extract(self.sqrt_alpha_bar[t])
         sqrt_one_minus_alpha_bar = self.__extract(self.sqrt_one_minus_alpha_bar[t])
-        noise = torch.randn_like(x)
+        noise = torch.randn_like(x, device=self.args.device)
         noise_x = sqrt_alpha_bar * x + sqrt_one_minus_alpha_bar * noise
         return noise_x, noise
     
@@ -73,12 +73,12 @@ class DDPM:
         images = torch.randn(shape, device=self.args.device)
         images_list = []
 
-        for t in tqdm(reversed(range(1, self.args.t)), position=0):
+        for t in tqdm(reversed(range(1, self.args.t+1)), position=0):
             if t > 1:
-                z = torch.randn(shape)
+                z = torch.randn(shape, device=self.args.device)
             else:
-                z = torch.zeros(shape)
-            ts = torch.ones((len(images), 1), dtype=int) * t
+                z = torch.zeros(shape, device=self.args.device)
+            ts = torch.ones((len(images), 1), dtype=int, device=self.args.device) * t
             images = self.sample_t(noise_net, images, ts, z)
             if t % (self.args.t // 10) == 0:
                 images_list.append(images.cpu())
@@ -120,7 +120,7 @@ class DDPM:
                 plot_image(fake_progress[t][i], path + f"/f_progress/f_{i}_{t * (self.args.t // 10)}")
         print("### Done Generating Images ###")
 
-    def train(self, num_epochs = 5, lr = .0001):
+    def train(self, num_epochs = 5, lr = 1e-6):
         noise_net = NoiseNet(self.args)
         noise_net.to(self.args.device)
         optimizer = optim.Adam(noise_net.parameters(), lr=lr)
@@ -162,13 +162,10 @@ class DDPM:
                 if (iters > 0 and iters % 5000 == 0) or ((epoch == num_epochs-1) and (i == len(self.dataloader)-1)):
 
                     with torch.no_grad():
-                        fake = self.sample(noise_net, batch.shape)
+                        fake = self.sample(noise_net, batch.shape)[-1]
                     plot_batch(fake, self.progress_dir + f"iter:{iters}")
 
                 iters += 1
-
-                # REMOVE
-                break
 
         print("### End Training Procedure ###")
         self.save_train_data(losses, noise_net)
@@ -182,7 +179,7 @@ class NoiseNet(nn.Module):
 
         time_dim = args.dim * 4
         self.time_embedding = nn.Sequential(
-            SinusoidalPosEmb(dim = args.dim),
+            SinusoidalPosEmb(dim = args.dim, device=self.args.device),
             nn.Linear(args.dim, time_dim),
             nn.GELU(),
             nn.Linear(time_dim, time_dim)
@@ -229,6 +226,11 @@ class NoiseNet(nn.Module):
 
         self.output_res = ConvNextBlock(init_dim * 2, init_dim, time_dim)
         self.output_conv = nn.Conv2d(init_dim, self.args.channel_size, 1)
+
+        for module in self.downs:
+            module.to(self.args.device)
+        for module in self.ups:
+            module.to(self.args.device)
 
     def forward(self, x, t):
         t = self.time_embedding(t)
@@ -329,16 +331,17 @@ class Upsample(nn.Module):
         return self.model(x)
     
 class SinusoidalPosEmb(nn.Module):
-    def __init__(self, dim, theta = 10000):
+    def __init__(self, dim, device, theta = 10000):
         super().__init__()
         if dim % 2 != 0:
             raise ValueError("'dim' must be even, but received {dim}")
         
         self.dim = dim
+        self.device = device
         self.theta = theta
 
     def forward(self, t):
-        ks = torch.arange(0, self.dim, 2)
+        ks = torch.arange(0, self.dim, 2, device=self.device)
         w_k = torch.exp(math.log(self.theta) * -ks / self.dim)
         emb = torch.cat((torch.sin(t * w_k), torch.cos(t * w_k)), dim=-1)
         return emb
