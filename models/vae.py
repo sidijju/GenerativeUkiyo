@@ -41,7 +41,7 @@ class VAE:
         optimizer = optim.Adam(vae.parameters(), lr=lr, betas=(0.5, 0.999))
 
         fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
-        bce = nn.BCELoss(reduction='sum')
+        mse = nn.MSELoss(reduction='sum')
 
         losses = []
         iters = 0
@@ -60,7 +60,7 @@ class VAE:
                 batch_hat, mu, logvar = vae(batch)
 
                 # reproduction loss
-                reproduction_loss = bce(batch_hat, batch)
+                reproduction_loss = mse(batch_hat, batch)
 
                 # KL divergence loss
                 kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
@@ -128,7 +128,7 @@ class VAE:
 ###############
 
 class VariationalAutoEncoder(nn.Module):
-    def __init__(self, args, channel_size, h_dim=2048):
+    def __init__(self, args, channel_size):
         super(VariationalAutoEncoder, self).__init__()
         self.args = args
         self.latent_size = args.latent
@@ -146,13 +146,12 @@ class VariationalAutoEncoder(nn.Module):
             nn.Flatten()
         )
 
-        self.mu = nn.Linear(h_dim, self.latent_size)
-        self.logvar = nn.Linear(h_dim, self.latent_size)
-        self.embed = nn.Linear(self.latent_size, h_dim)
+        self.mu = nn.Linear(nf * 32, self.latent_size)
+        self.logvar = nn.Linear(nf * 32, self.latent_size)
+        self.embed = nn.Linear(self.latent_size, nf * 32)
 
         self.decoder = nn.Sequential(
-            nn.Unflatten(1, (h_dim, 1, 1)),
-            self.conv_transpose_block(h_dim, nf * 32),
+            nn.Unflatten(1, (nf * 32, 1, 1)),
             self.conv_transpose_block(nf * 32, nf * 16),
             self.conv_transpose_block(nf * 16, nf * 8),
             self.conv_transpose_block(nf * 8, nf * 4),
