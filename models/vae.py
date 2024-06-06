@@ -86,9 +86,12 @@ class VAE:
 
                 if (iters % 5000 == 0) or ((epoch == num_epochs-1) and (i == len(self.dataloader)-1)):
 
+                    plot_batch(batch, self.progress_dir + f"input-iter:{iters}")
+                    plot_batch(batch_hat, self.progress_dir + f"output-iter:{iters}")
+
                     with torch.no_grad():
                         fake = vae.decode(fixed_latent).detach().cpu()
-                    plot_batch(fake, self.progress_dir + f"iter:{iters}")
+                    plot_batch(fake, self.progress_dir + f"gen-iter:{iters}")
 
                 iters += 1
 
