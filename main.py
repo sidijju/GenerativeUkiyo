@@ -46,6 +46,7 @@ parser.add_argument('--flip', action='store_true', help='flip label in GANs for 
 parser.add_argument('--t', type=int, default=1000, help='noise timesteps for ddpm')
 parser.add_argument('--b_0', type=float, default=1e-4, help='beta at timestep 0 for ddpm')
 parser.add_argument('--b_t', type=float, default=0.02, help='beta at timestep t for ddpm')
+parser.add_argument('--beta', type=float, default=1.0, help='beta coefficient for KL term in VAE loss')
 
 args = parser.parse_args()
 
@@ -54,9 +55,12 @@ if not args.test:
     torch.manual_seed(args.seed)
     torch.use_deterministic_algorithms(True)
 
-if (torch.cuda.is_available()):
+if torch.cuda.is_available():
     print("Using cuda")
     args.device = torch.device("cuda:0")
+# elif torch.backends.mps.is_available():
+#     print("Using mps")
+#     args.device = torch.device("mps")
 else: 
     print("Using cpu")
     args.device = torch.device("cpu")

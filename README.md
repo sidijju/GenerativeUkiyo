@@ -68,3 +68,5 @@ and specify the directory with pretrained weights to `--weights`
 `--b_0` - beta at timestep 0 for ddpm
 
 `--b_t` - beta at timestep t for ddpm
+
+'--beta' - beta coefficient for KL term in VAE loss

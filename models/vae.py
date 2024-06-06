@@ -21,6 +21,7 @@ class VAE:
         self.workers = workers
         self.channel_size = args.channel_size
         self.latent_size = args.latent
+        self.beta = args.beta
 
         if not self.args.test:
             self.run_dir = "train/vae-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
@@ -65,7 +66,7 @@ class VAE:
                 # KL divergence loss
                 kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-                loss = (reproduction_loss + kl_loss)/2
+                loss = reproduction_loss + self.beta * kl_loss
                 loss.backward()
                 optimizer.step()
 
