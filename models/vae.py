@@ -155,7 +155,7 @@ class VariationalAutoEncoder(nn.Module):
         self.embed = nn.Linear(self.latent_size, nf * 8)
 
         self.decoder = nn.Sequential(
-            nn.Unflatten(1, (nf * 32, 1, 1)),
+            nn.Unflatten(1, (nf * 8, 1, 1)),
             self.conv_transpose_block(nf * 8, nf * 4),
             self.conv_transpose_block(nf * 4, nf * 2),
             self.conv_transpose_block(nf * 2, nf),
