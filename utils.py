@@ -8,15 +8,17 @@ def make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def plot_image(image, path):
-    image = scale_image(image, inverse=True)
+def plot_image(image, path, scale=True):
+    if scale:
+        image = scale_image(image, inverse=True)
     plt.cla()
     plt.imshow(image.cpu().permute(1, 2, 0))
     plt.savefig(path)
 
-def plot_batch(batch, path):
-    for i in range(len(batch)):
-        batch[i] = scale_image(batch[i], inverse=True)
+def plot_batch(batch, path, scale=True):
+    if scale:
+        for i in range(len(batch)):
+            batch[i] = scale_image(batch[i], inverse=True)
     plt.cla()
     grid = vutils.make_grid(batch.cpu()[:25], nrow = 5, padding=2, normalize=True)
     plt.axis('off')

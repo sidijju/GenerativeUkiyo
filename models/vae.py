@@ -42,7 +42,8 @@ class VAE:
         optimizer = optim.Adam(vae.parameters(), lr=lr, betas=(0.5, 0.999))
 
         fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
-        mse = nn.MSELoss()
+
+        loss_fn = nn.MSELoss() if self.args.mse else nn.BCELoss()
 
         losses = []
         iters = 0
@@ -52,7 +53,9 @@ class VAE:
             for i, batch in enumerate(self.dataloader, 0):
                 batch, _ = batch
                 batch = batch.to(self.args.device)
-                batchsize = batch.shape[0]
+
+                # scale to between 0 and 1
+                batch = scale_image(batch, inverse=True)
 
                 if iters == 0:
                     plot_batch(batch, self.progress_dir + f"train_example")
@@ -61,7 +64,7 @@ class VAE:
                 batch_hat, mu, logvar = vae(batch)
 
                 # reproduction loss
-                reproduction_loss = mse(batch_hat, batch)
+                reproduction_loss = loss_fn(batch_hat, batch)
 
                 # KL divergence loss
                 kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
@@ -122,8 +125,8 @@ class VAE:
             fake_batch = vae.decode(noise)
 
         for i in range(n):
-            plot_image(batch[i], path + f"/r_{i}")
-            plot_image(fake_batch[i], path + f"/r_{i}")
+            plot_image(batch[i], path + f"/r_{i}", scale=True)
+            plot_image(fake_batch[i], path + f"/r_{i}", scale=True)
         print("### Done Generating Images ###")
 
 ###############
@@ -160,7 +163,7 @@ class VariationalAutoEncoder(nn.Module):
             self.conv_transpose_block(nf * 4, nf * 2),
             self.conv_transpose_block(nf * 2, nf),
             nn.ConvTranspose2d(nf, 3, 4, 2, 1, bias=False),
-            nn.Tanh(),
+            nn.Sigmoid(),
         )
 
     def reparameterize(self, mu, logvar):
