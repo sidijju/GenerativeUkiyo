@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--n', type=int, default=5, help='number of training epochs')
 parser.add_argument('--seed', type=int, default=128, help='manual random seed')
 parser.add_argument('--batchsize', type=int, default=32, help='batch size')
-parser.add_argument('--latent', type=int, default=100, help='size of latent dimension')
+parser.add_argument('--latent', type=int, default=512, help='size of latent dimension')
 
 ### Model Flags
 

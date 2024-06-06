@@ -140,32 +140,26 @@ class VariationalAutoEncoder(nn.Module):
         self.args = args
         self.latent_size = args.latent
 
-        nf = 16
+        nf = 64
 
         self.encoder = nn.Sequential(
             self.conv_block(channel_size, nf),
             self.conv_block(nf, nf * 2),
             self.conv_block(nf * 2, nf * 4),
-            self.conv_block(nf * 4, nf * 4),
             self.conv_block(nf * 4, nf * 8),
-            self.conv_block(nf * 8, nf * 16),
-            self.conv_block(nf * 16, nf * 32),
             nn.Flatten()
         )
 
-        self.mu = nn.Linear(nf * 32, self.latent_size)
-        self.logvar = nn.Linear(nf * 32, self.latent_size)
-        self.embed = nn.Linear(self.latent_size, nf * 32)
+        self.mu = nn.Linear(nf * 8, self.latent_size)
+        self.logvar = nn.Linear(nf * 8, self.latent_size)
+        self.embed = nn.Linear(self.latent_size, nf * 8)
 
         self.decoder = nn.Sequential(
             nn.Unflatten(1, (nf * 32, 1, 1)),
-            self.conv_transpose_block(nf * 32, nf * 16),
-            self.conv_transpose_block(nf * 16, nf * 8),
             self.conv_transpose_block(nf * 8, nf * 4),
-            self.conv_transpose_block(nf * 4, nf * 4),
             self.conv_transpose_block(nf * 4, nf * 2),
             self.conv_transpose_block(nf * 2, nf),
-            nn.ConvTranspose2d(nf, 3, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(nf, channel_size, 4, 2, 1, bias=False),
             nn.Sigmoid(),
         )
 
