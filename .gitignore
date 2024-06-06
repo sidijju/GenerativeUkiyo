@@ -3,5 +3,6 @@
 *.tar.gz
 *.pyc
 *.jpg
+*.png
 train
 .venv
