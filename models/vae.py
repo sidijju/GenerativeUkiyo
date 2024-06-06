@@ -147,15 +147,17 @@ class VariationalAutoEncoder(nn.Module):
             self.conv_block(nf, nf * 2),
             self.conv_block(nf * 2, nf * 4),
             self.conv_block(nf * 4, nf * 8),
+            self.conv_block(nf * 8, nf * 16),
         )
 
-        self.f_max = nf * 8
+        self.f_max = nf * 16
 
-        self.mu = nn.Linear(self.f_max * 8 * 8, self.latent_size)
-        self.logvar = nn.Linear(self.f_max * 8 * 8, self.latent_size)
-        self.embed = nn.Linear(self.latent_size, self.f_max * 8 * 8)
+        self.mu = nn.Linear(self.f_max * 4 * 4, self.latent_size)
+        self.logvar = nn.Linear(self.f_max * 4 * 4, self.latent_size)
+        self.embed = nn.Linear(self.latent_size, self.f_max * 4 * 4)
 
         self.decoder = nn.Sequential(
+            self.conv_transpose_block(nf * 16, nf * 8)
             self.conv_transpose_block(nf * 8, nf * 4),
             self.conv_transpose_block(nf * 4, nf * 2),
             self.conv_transpose_block(nf * 2, nf),
@@ -183,14 +185,14 @@ class VariationalAutoEncoder(nn.Module):
     
     def encode(self, input):
         embed = self.encoder(input)
-        embed = embed.view(embed.shape[0], self.f_max * 8 * 8)
+        embed = embed.view(embed.shape[0], self.f_max * 4 * 4)
         mu, logvar = self.mu(embed), self.logvar(embed)
         sample = self.reparameterize(mu, logvar)
         return sample, mu, logvar
     
     def decode(self, input):
         embed = self.embed(input.squeeze())
-        embed = embed.view(embed.shape[0], self.f_max, 8, 8)
+        embed = embed.view(embed.shape[0], self.f_max, 4, 4)
         return self.decoder(embed)
     
     def forward(self, input):
