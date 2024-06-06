@@ -47,6 +47,8 @@ and specify the directory with pretrained weights to `--weights`
 
 ### Dataset Flags
 
+'--ff' - 'use Flicker Faces 128 x 128 dataset (assuming its already downloaded)'
+
 `--augment` - run auto-augmentation on input dataset
 
 `--new_dir` - directory to store augmented dataset

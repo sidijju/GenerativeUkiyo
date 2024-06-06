@@ -12,7 +12,7 @@ from models.dc_gan import DCGAN
 from models.cdc_gan import CDCGAN
 from models.vae import VAE
 from models.ddpm import DDPM
-from dataset import JapArtDataset
+from dataset import *
 
 parser = argparse.ArgumentParser()
 
@@ -31,6 +31,7 @@ parser.add_argument('--ddpm', action='store_true', help='train denoising diffusi
 
 ### Dataset Flags
 
+parser.add_argument('--ff', action='store_true', help='use Flicker Faces 128 x 128 dataset (assuming its already downloaded)')
 parser.add_argument('--augment', action='store_true', help='augment dataset')
 parser.add_argument('--new_dir', type=str, default='./augment/', help='directory to store after augment')
 
@@ -107,6 +108,8 @@ if args.augment:
         print(f"Augmented Dataset Size: {counter + new_counter}")
         print("#########################")
     dataset = JapArtDataset(args)
+elif args.ff:
+    dataset = FlickerFacesDataset(args)
 else:
     dataset = JapArtDataset(args)
 

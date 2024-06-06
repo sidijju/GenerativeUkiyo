@@ -79,3 +79,48 @@ class JapArtDataset(Dataset):
             img = scale_image(img)
 
         return img, label
+    
+class FlickerFacesDataset(Dataset):
+
+    def __init__(self, args, transform=None):
+        if args.augment:
+            self.img_dir = args.new_dir
+        else:
+            self.img_dir = 'ff/real_faces_128'
+        self.dim = args.dim
+        self.transform = transform
+
+        self.img_names = []
+        self.labels = []
+        self.labels_names = [
+            'face',
+        ]
+        self.labels_map = dict(zip(self.labels_names, range(len(self.labels_names))))
+
+        for f in glob.glob(self.img_dir + "/*.png"):
+            label = 0
+            self.img_names.append(f)
+            self.labels.append(label)
+
+    def __len__(self):
+        return len(self.img_names)
+
+    def __getitem__(self, idx):
+        label = torch.tensor(self.labels[idx], dtype=torch.int64)
+        img = read_image(self.img_names[idx])
+
+        assert img.shape[0] <= 3
+
+        if self.transform:
+            img = self.transform(img)
+        else:            
+            c, _, _ = img.size()
+            if c < 3:
+                img = torch.cat((img, img, img), dim=0)
+            
+            transform = v2.Compose([
+                v2.ToDtype(torch.float32, scale=True),
+            ])
+            img = transform(img)
+
+        return img, label
