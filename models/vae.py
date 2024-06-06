@@ -129,7 +129,7 @@ class VAE:
 
         for i in range(n):
             plot_image(batch[i], path + f"/r_{i}", scale=True)
-            plot_image(fake_batch[i], path + f"/r_{i}", scale=True)
+            plot_image(fake_batch[i], path + f"/f_{i}", scale=True)
         print("### Done Generating Images ###")
 
 ###############
