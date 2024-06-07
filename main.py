@@ -60,9 +60,9 @@ if not args.test:
 if torch.cuda.is_available():
     print("Using cuda")
     args.device = torch.device("cuda:0")
-# elif torch.backends.mps.is_available():
-#     print("Using mps")
-#     args.device = torch.device("mps")
+elif torch.backends.mps.is_available():
+    print("Using mps")
+    args.device = torch.device("mps")
 else: 
     print("Using cpu")
     args.device = torch.device("cpu")
