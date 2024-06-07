@@ -132,64 +132,64 @@ class VAE:
 ###############
 
 class VariationalAutoEncoder(nn.Module):
-    def __init__(self, args, channel_size):
+    def __init__(self, args, channel_size, dim_mults = (1, 2, 4, 8, 16)):
         super(VariationalAutoEncoder, self).__init__()
         self.args = args
         self.latent_size = args.latent
 
         nf = 64
+        hidden_dims = [nf * mult for mult in list(dim_mults)]
+        self.d_max = hidden_dims[-1]
 
         self.encoder = nn.Sequential(
-            self.conv_block(channel_size, nf),
-            self.conv_block(nf, nf * 2),
-            self.conv_block(nf * 2, nf * 4),
-            self.conv_block(nf * 4, nf * 8),
-            self.conv_block(nf * 8, nf * 16),
+            *[
+                self.conv_block(in_f, out_f)
+                for in_f, out_f in zip([channel_size] + hidden_dims[:-1], hidden_dims)
+            ]
         )
 
-        self.f_max = nf * 16
-
-        self.mu = nn.Linear(self.f_max * 4 * 4, self.latent_size)
-        self.logvar = nn.Linear(self.f_max * 4 * 4, self.latent_size)
-        self.embed = nn.Linear(self.latent_size, self.f_max * 4 * 4)
+        self.mu = nn.Linear(self.d_max * 4 * 4, self.latent_size)
+        self.logvar = nn.Linear(self.d_max * 4 * 4, self.latent_size)
+        self.embed = nn.Linear(self.latent_size, self.d_max * 4 * 4)
 
         self.decoder = nn.Sequential(
-            self.conv_transpose_block(nf * 16, nf * 8),
-            self.conv_transpose_block(nf * 8, nf * 4),
-            self.conv_transpose_block(nf * 4, nf * 2),
-            self.conv_transpose_block(nf * 2, nf),
+            *[
+                self.conv_transpose_block(in_f, out_f)
+                for in_f, out_f in zip(reversed(hidden_dims[1:]), reversed(hidden_dims[:-1]))
+            ],
             nn.ConvTranspose2d(nf, channel_size, 4, 2, 1, bias=False),
             nn.Sigmoid(),
         )
 
     def reparameterize(self, mu, logvar):
-        std = logvar.mul(0.5).exp_()
-        return mu + std * torch.randn(*mu.size()).to(self.args.device)
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std, device=self.args.device)
+        return mu + std * eps
 
     def conv_block(self, input, output, kernel=4, stride=2, pad=1):
         return nn.Sequential(
             nn.Conv2d(input, output, kernel, stride, pad, bias=False),
             nn.BatchNorm2d(output),
-            nn.ReLU(True),
+            nn.LeakyReLU(),
         )
     
     def conv_transpose_block(self, input, output, kernel=4, stride=2, pad=1):
         return nn.Sequential(
             nn.ConvTranspose2d(input, output, kernel, stride, pad, bias=False),
             nn.BatchNorm2d(output),
-            nn.ReLU(True),
+            nn.LeakyReLU(),
         )
     
     def encode(self, input):
         embed = self.encoder(input)
-        embed = embed.view(embed.shape[0], self.f_max * 4 * 4)
+        embed = torch.flatten(embed, start_dim=1)
         mu, logvar = self.mu(embed), self.logvar(embed)
         sample = self.reparameterize(mu, logvar)
         return sample, mu, logvar
     
     def decode(self, input):
         embed = self.embed(input.squeeze())
-        embed = embed.view(embed.shape[0], self.f_max, 4, 4)
+        embed = embed.view(-1, self.d_max, 4, 4)
         return self.decoder(embed)
     
     def forward(self, input):
