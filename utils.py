@@ -8,17 +8,12 @@ def make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def plot_image(image, path, scale=True):
-    if scale:
-        image = scale_image(image, inverse=True)
+def plot_image(image, path):
     plt.cla()
     plt.imshow(image.cpu().permute(1, 2, 0))
     plt.savefig(path)
 
-def plot_batch(batch, path, scale=True):
-    if scale:
-        for i in range(len(batch)):
-            batch[i] = scale_image(batch[i], inverse=True)
+def plot_batch(batch, path):
     plt.cla()
     grid = vutils.make_grid(batch.cpu()[:25], nrow = 5, padding=2, normalize=True)
     plt.axis('off')
@@ -37,9 +32,3 @@ def weights_init(model):
     elif classname.find('ConvTranspose2d') != -1:
         nn.init.normal_(model.weight.data, 0.0, 0.02)
         nn.init.constant_(model.bias.data, 0)
-
-# scale image from 0 - 1 to -1 - 1 and inverse
-def scale_image(image, inverse=False):
-    if inverse:
-        return torch.div(image + 1, 2)
-    return torch.mul(image, 2) - 1

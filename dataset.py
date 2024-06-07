@@ -76,7 +76,6 @@ class JapArtDataset(Dataset):
             ])
             img = transform(img)
             img = torch.clamp(img, 0, 1)
-            img = scale_image(img)
 
         return img, label
     

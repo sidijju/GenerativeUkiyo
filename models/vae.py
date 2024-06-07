@@ -30,7 +30,7 @@ class VAE:
             make_dir(self.progress_dir)
         
     def train(self, 
-            num_epochs = 50,
+            num_epochs = 5,
             lr = .0002):
 
         if not self.dataloader:
@@ -53,9 +53,6 @@ class VAE:
             for i, batch in enumerate(self.dataloader, 0):
                 batch, _ = batch
                 batch = batch.to(self.args.device)
-
-                # scale to between 0 and 1
-                batch = scale_image(batch, inverse=True)
 
                 if iters == 0:
                     plot_batch(batch, self.progress_dir + f"train_example")
@@ -128,8 +125,8 @@ class VAE:
             fake_batch = vae.decode(noise)
 
         for i in range(n):
-            plot_image(batch[i], path + f"/r_{i}", scale=True)
-            plot_image(fake_batch[i], path + f"/f_{i}", scale=True)
+            plot_image(batch[i], path + f"/r_{i}")
+            plot_image(fake_batch[i], path + f"/f_{i}")
         print("### Done Generating Images ###")
 
 ###############
