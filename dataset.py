@@ -7,10 +7,7 @@ from torchvision.io import read_image
 class JapArtDataset(Dataset):
 
     def __init__(self, args, transform=None):
-        if args.augment:
-            self.img_dir = args.new_dir
-        else:
-            self.img_dir = 'jap-art/'
+        self.img_dir = args.augment if args.augment else 'jap-art/'
         self.dim = args.dim
         self.transform = transform
 
@@ -81,10 +78,7 @@ class JapArtDataset(Dataset):
 class FlickerFacesDataset(Dataset):
 
     def __init__(self, args, transform=None):
-        if args.augment:
-            self.img_dir = args.new_dir
-        else:
-            self.img_dir = 'ff/real_faces_128'
+        self.img_dir = args.augment if args.augment else 'ff/real_faces_128'
         self.dim = args.dim
         self.transform = transform
 

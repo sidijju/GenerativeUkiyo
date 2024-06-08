@@ -34,13 +34,11 @@ parser.add_argument('--ddpm', action='store_true', help='train denoising diffusi
 ### Dataset Flags
 
 parser.add_argument('--ff', action='store_true', help='use Flicker Faces 128 x 128 dataset (assuming its already downloaded)')
-parser.add_argument('--augment', action='store_true', help='augment dataset')
-parser.add_argument('--new_dir', type=str, default='./augment/', help='directory to store after augment')
+parser.add_argument('--augment', type=str, default=None, help='augment dataset to input directory')
 
 ## Test Flags
 
-parser.add_argument('--test', default=False, action='store_true', help='set testing mode to true')
-parser.add_argument('--weights', type=str, default='train/run', help='path to folder with model weights')
+parser.add_argument('--test', type=str, default=None, help='test model with weights from input path')
 
 ### Additional Flags
 
@@ -76,7 +74,7 @@ else:
 args.dim = 128
 
 if args.augment:
-    make_dir(args.new_dir)
+    make_dir(args.augment)
 
     to_float32 = v2.ToDtype(dtype=torch.float32, scale=True)
 
@@ -88,9 +86,9 @@ if args.augment:
         img = to_float32(read_image(f).to(args.device))
         dir_name = f.split('/')[-2]
         img_name = f.split('/')[-1][:-4]
-        store_location = args.new_dir + dir_name + "/" + img_name
-        if not os.path.exists(args.new_dir + dir_name):
-            os.makedirs(args.new_dir + dir_name)
+        store_location = args.augment + dir_name + "/" + img_name
+        if not os.path.exists(args.augment + dir_name):
+            os.makedirs(args.augment + dir_name)
         save_image(img, store_location + ".jpg")
 
         augment_transforms = [
@@ -129,8 +127,8 @@ elif args.vae:
 else:
     model = DCGAN(args, dataloader)
 
-if not args.test:
+if args.test:
+    model.generate(args.test)
+else:
     model.train(num_epochs=args.n)
     model.generate(model.run_dir)
-else:
-    model.generate(args.weights)

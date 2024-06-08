@@ -25,7 +25,7 @@ The art of woodblock printing has flourished since at least the 1700s in Japan. 
 To run the training mechanism with default settings run `python main.py`
 
 To generate images with pretrained weights, use the `--test` flag 
-and specify the directory with pretrained weights to `--weights`
+and specify the directory with pretrained weights
 
 ### General Flags
 
@@ -49,15 +49,11 @@ and specify the directory with pretrained weights to `--weights`
 
 '--ff' - 'use Flicker Faces 128 x 128 dataset (assuming its already downloaded)'
 
-`--augment` - run auto-augmentation on input dataset
-
-`--new_dir` - directory to store augmented dataset
+`--augment` - run auto-augmentation on input dataset and store in input directory
 
 ### Test Flags
 
-`--test` - set testing mode to true and generate images with selected model
-
-`--weights` - path to folder with pretrained model weights
+`--test` - set testing mode to true and generate images with selected model and path to folder with pretrained model weights
 
 ### Additional Flags
 
