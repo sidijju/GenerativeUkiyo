@@ -14,6 +14,8 @@ from models.vae import VAE
 from models.ddpm import DDPM
 from dataset import *
 
+from utils import make_dir
+
 parser = argparse.ArgumentParser()
 
 ### General Flags
@@ -74,38 +76,37 @@ else:
 args.dim = 128
 
 if args.augment:
-    if not os.path.exists(args.new_dir):
-        os.makedirs(args.new_dir)
+    make_dir(args.new_dir)
 
-        to_float32 = v2.ToDtype(dtype=torch.float32, scale=True)
+    to_float32 = v2.ToDtype(dtype=torch.float32, scale=True)
 
-        print("### Augmenting Dataset ###")
-        counter = 0
-        new_counter = 0
-        for f in glob.glob("jap-art/*/*.jpg"):
-            counter += 1
-            img = to_float32(read_image(f).to(args.device))
-            dir_name = f.split('/')[-2]
-            img_name = f.split('/')[-1][:-4]
-            store_location = args.new_dir + dir_name + "/" + img_name
-            if not os.path.exists(args.new_dir + dir_name):
-                os.makedirs(args.new_dir + dir_name)
-            save_image(img, store_location + ".jpg")
+    print("### Augmenting Dataset ###")
+    counter = 0
+    new_counter = 0
+    for f in glob.glob("jap-art/*/*.jpg"):
+        counter += 1
+        img = to_float32(read_image(f).to(args.device))
+        dir_name = f.split('/')[-2]
+        img_name = f.split('/')[-1][:-4]
+        store_location = args.new_dir + dir_name + "/" + img_name
+        if not os.path.exists(args.new_dir + dir_name):
+            os.makedirs(args.new_dir + dir_name)
+        save_image(img, store_location + ".jpg")
 
-            augment_transforms = [
-                v2.RandomHorizontalFlip(p=1.0),
-                v2.RandomRotation(30, fill=1),
-                v2.RandomResizedCrop(720),
-                v2.RandomPerspective(distortion_scale = 0.25, p=1.0, fill=1.0),
-            ]
+        augment_transforms = [
+            v2.RandomHorizontalFlip(p=1.0),
+            v2.RandomRotation(30, fill=1),
+            v2.RandomResizedCrop(720),
+            v2.RandomPerspective(distortion_scale = 0.25, p=1.0, fill=1.0),
+        ]
 
-            for i, transform in enumerate(augment_transforms):
-                new_counter += 1
-                aug_img = transform(img)
-                save_image(aug_img, store_location + f"_aug{i}.jpg")
+        for i, transform in enumerate(augment_transforms):
+            new_counter += 1
+            aug_img = transform(img)
+            save_image(aug_img, store_location + f"_aug{i}.jpg")
 
-        print(f"Original Dataset Size: {counter}")
-        print(f"Augmented Dataset Size: {counter + new_counter}")
+    print(f"Original Dataset Size: {counter}")
+    print(f"Augmented Dataset Size: {counter + new_counter}")
         print("#########################")
     dataset = JapArtDataset(args)
 elif args.ff:
