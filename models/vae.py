@@ -29,9 +29,7 @@ class VAE:
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
         
-    def train(self, 
-            num_epochs = 5,
-            lr = .0002):
+    def train(self):
 
         if not self.dataloader:
             return
@@ -39,7 +37,7 @@ class VAE:
         vae = VariationalAutoEncoder(self.args, self.channel_size)
         vae.apply(weights_init)
         vae.to(self.args.device)
-        optimizer = optim.Adam(vae.parameters(), lr=lr, betas=(0.5, 0.999))
+        optimizer = optim.Adam(vae.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
         fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
 
@@ -49,7 +47,7 @@ class VAE:
         iters = 0
 
         print("### Begin Training Procedure ###")
-        for epoch in tqdm(range(num_epochs)):
+        for epoch in tqdm(range(self.args.n)):
             for i, batch in enumerate(self.dataloader, 0):
                 batch, _ = batch
                 batch = batch.to(self.args.device)
@@ -76,12 +74,12 @@ class VAE:
 
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\tr_loss: %.4f\tkl_loss: %.4f\tloss: %.4f'
-                        % (epoch, num_epochs, i, len(self.dataloader),
+                        % (epoch, self.args.n, i, len(self.dataloader),
                             reproduction_loss.item(), kl_loss.item(), loss.item()))
 
                 losses.append(loss.item())
 
-                if (iters % 5000 == 0) or ((epoch == num_epochs-1) and (i == len(self.dataloader)-1)):
+                if (iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
 
                     plot_batch(batch, self.progress_dir + f"input-iter:{iters}")
                     plot_batch(batch_hat, self.progress_dir + f"output-iter:{iters}")

@@ -31,7 +31,6 @@ class DCGAN(GAN):
         print("### Done Generating Images ###")
         
     def train(self, 
-            num_epochs = 5,
             g_lr = .0001,
             d_lr = .0004):
 
@@ -65,7 +64,7 @@ class DCGAN(GAN):
         iters = 0
 
         print("### Begin Training Procedure ###")
-        for epoch in tqdm(range(num_epochs)):
+        for epoch in tqdm(range(self.args.n)):
             for i, batch in enumerate(self.dataloader, 0):
                 batch, labels = batch
                 batch = batch.to(self.args.device)
@@ -139,14 +138,14 @@ class DCGAN(GAN):
 
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\td_loss: %.4f\tg_loss: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                        % (epoch, num_epochs, i, len(self.dataloader),
+                        % (epoch, self.args.n, i, len(self.dataloader),
                             (d_loss_real.item() + d_loss_fake.item())/2, g_loss.item(), dx, dgz_1, dgz_2))
 
                 d_losses_real.append(d_loss_real.item())
                 d_losses_fake.append(d_loss_fake.item())
                 g_losses.append(g_loss.item())
 
-                if (iters % 5000 == 0) or ((epoch == num_epochs-1) and (i == len(self.dataloader)-1)):
+                if (iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
 
                     with torch.no_grad():
                         fake = g_net(fixed_latent).detach()

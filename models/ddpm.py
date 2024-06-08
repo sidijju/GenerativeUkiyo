@@ -120,17 +120,17 @@ class DDPM:
                 plot_image(fake_progress[t][i], path + f"/f_progress/f_{i}_{t * (self.args.t // 10)}")
         print("### Done Generating Images ###")
 
-    def train(self, num_epochs = 5, lr = 1e-6):
+    def train(self):
         noise_net = NoiseNet(self.args)
         noise_net.to(self.args.device)
-        optimizer = optim.Adam(noise_net.parameters(), lr=lr)
+        optimizer = optim.Adam(noise_net.parameters(), lr=self.args.lr)
         mse = nn.MSELoss()
 
         losses = []
         iters = 0
 
         print("### Begin Training Procedure ###")
-        for epoch in tqdm(range(num_epochs)):
+        for epoch in tqdm(range(self.args.n)):
             for i, batch in enumerate(self.dataloader, 0):
                 batch, labels = batch
                 batch_t = torch.randint_like(labels, high=self.args.t+1, device=self.args.device)
@@ -155,11 +155,11 @@ class DDPM:
 
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\tloss: %.4f'
-                        % (epoch, num_epochs, i, len(self.dataloader), mse_loss.item()))
+                        % (epoch, self.args.n, i, len(self.dataloader), mse_loss.item()))
 
                 losses.append(mse_loss.item())
 
-                if (iters > 0 and iters % 5000 == 0) or ((epoch == num_epochs-1) and (i == len(self.dataloader)-1)):
+                if (iters > 0 and iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
 
                     with torch.no_grad():
                         fake = self.sample(noise_net, batch.shape)[-1]

@@ -43,5 +43,5 @@ class GAN(ABC):
     def generate(self, path, n = 5):
         pass
 
-    def train(self, num_epochs = 5, g_lr = .0001, d_lr = .0004):
+    def train(self, g_lr = .0001, d_lr = .0004):
         pass
