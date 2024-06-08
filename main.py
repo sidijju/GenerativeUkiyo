@@ -105,7 +105,8 @@ if args.augment:
 
     print(f"Original Dataset Size: {counter}")
     print(f"Augmented Dataset Size: {counter + new_counter}")
-        print("#########################")
+    print("#########################")
+    
     dataset = JapArtDataset(args)
 elif args.ff:
     dataset = FlickerFacesDataset(args)
