@@ -40,7 +40,7 @@ class VAE:
         optimizer = optim.Adam(vae.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
         sample_batch, _ = next(iter(self.dataloader))
-        sample_batch.to(self.args.device)
+        sample_batch = sample_batch.to(self.args.device)
         plot_batch(sample_batch, self.progress_dir + f"train_example")
 
         fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
