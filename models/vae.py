@@ -38,7 +38,7 @@ class VAE:
         vae.apply(weights_init)
         vae.to(self.args.device)
         optimizer = optim.Adam(vae.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', threshold=1e-6)
+        #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', threshold=1e-6)
 
         sample_batch, _ = next(iter(self.dataloader))
         sample_batch = sample_batch.to(self.args.device)
@@ -69,7 +69,7 @@ class VAE:
                 loss = reproduction_loss + self.beta * kl_loss
                 loss.backward()
                 optimizer.step()
-                scheduler.step(loss)
+                #scheduler.step(loss)
 
                 losses.append(loss.item())
 
@@ -78,9 +78,9 @@ class VAE:
                 #############################
 
                 if i % 100 == 0:
-                    print(f'[%d/%d][%d/%d]\tlr: %.10f\tr_loss: %.4f\tkl_loss: %.4f\tloss: %.4f'
+                    print(f'[%d/%d][%d/%d]\tr_loss: %.4f\tkl_loss: %.4f\tloss: %.4f'
                         % (epoch, self.args.n, i, len(self.dataloader),
-                            scheduler.get_last_lr()[0], reproduction_loss.item(), kl_loss.item(), loss.item()))
+                            reproduction_loss.item(), kl_loss.item(), loss.item()))
                     
 
                 if (iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
