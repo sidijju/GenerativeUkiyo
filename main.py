@@ -24,7 +24,7 @@ parser.add_argument('-n', '--n', type=int, default=5, help='number of training e
 parser.add_argument('--seed', type=int, default=128, help='manual random seed')
 parser.add_argument('--batchsize', type=int, default=32, help='batch size')
 parser.add_argument('--latent', type=int, default=512, help='size of latent dimension')
-parser.add_argument('--lr', type=float, default=1e-6, help='learning rate for training')
+parser.add_argument('--lr', type=float, default=1e-4, help='learning rate for training')
 
 ### Model Flags
 
