@@ -99,6 +99,8 @@ class VAE:
         torch.save(vae.state_dict(), self.run_dir + '/vae.pt')
 
         # save losses
+        plt.cla()
+        plt.yscale('log')
         plt.figure(figsize=(10,5))
         plt.title("Training Losses")
         plt.plot(losses,label="L")

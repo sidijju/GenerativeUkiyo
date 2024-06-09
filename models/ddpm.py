@@ -91,6 +91,7 @@ class DDPM:
         torch.save(noise_net.state_dict(), self.run_dir + '/noise_net.pt')
 
         # save losses
+        plt.cla()
         plt.figure(figsize=(10,5))
         plt.title("Training Losses")
         plt.plot(losses,label="p")

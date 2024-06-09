@@ -31,7 +31,9 @@ class GAN(ABC):
         torch.save(g_net.state_dict(), self.run_dir + '/generator.pt')
 
         # save losses
+        plt.cla()
         plt.figure(figsize=(10,5))
+        plt.yscale('log')
         plt.title("Training Losses")
         plt.plot(g_losses,label="G")
         plt.plot([sum(x)/2 for x in zip(d_losses_real, d_losses_fake)], label="D")
