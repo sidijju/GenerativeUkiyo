@@ -69,7 +69,7 @@ class VAE:
                 loss = reproduction_loss + self.beta * kl_loss
                 loss.backward()
                 optimizer.step()
-                scheduler.step(loss)
+                #scheduler.step(loss)
 
                 losses.append(loss.item())
 
