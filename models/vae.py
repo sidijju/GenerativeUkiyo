@@ -39,7 +39,7 @@ class VAE:
         vae.to(self.args.device)
         optimizer = optim.Adam(vae.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
-        sample_batch = next(iter(self.dataloader))
+        sample_batch, _ = next(iter(self.dataloader))
         sample_batch.to(self.args.device)
         plot_batch(sample_batch, self.progress_dir + f"train_example")
 
