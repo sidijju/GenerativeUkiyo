@@ -38,7 +38,7 @@ class VAE:
         vae.apply(weights_init)
         vae.to(self.args.device)
         optimizer = optim.Adam(vae.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', threshold=1e-3, min_lr=1e-6, factor=0.5)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', threshold=1e-3, factor=0.5)
 
         sample_batch, _ = next(iter(self.dataloader))
         sample_batch = sample_batch.to(self.args.device)
