@@ -39,6 +39,10 @@ class VAE:
         vae.to(self.args.device)
         optimizer = optim.Adam(vae.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
+        sample_batch = next(iter(self.dataloader))
+        sample_batch.to(self.args.device)
+        plot_batch(sample_batch, self.progress_dir + f"train_example")
+
         fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
 
         loss_fn = nn.MSELoss() if self.args.mse else nn.BCELoss()
@@ -51,9 +55,6 @@ class VAE:
             for i, batch in enumerate(self.dataloader, 0):
                 batch, _ = batch
                 batch = batch.to(self.args.device)
-
-                if iters == 0:
-                    plot_batch(batch, self.progress_dir + f"train_example")
 
                 vae.zero_grad()
                 batch_hat, mu, logvar = vae(batch)
@@ -68,6 +69,8 @@ class VAE:
                 loss.backward()
                 optimizer.step()
 
+                losses.append(loss.item())
+
                 #############################
                 ####   Metrics Tracking  ####
                 #############################
@@ -77,16 +80,15 @@ class VAE:
                         % (epoch, self.args.n, i, len(self.dataloader),
                             reproduction_loss.item(), kl_loss.item(), loss.item()))
 
-                losses.append(loss.item())
-
                 if (iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
-
-                    plot_batch(batch, self.progress_dir + f"input-iter:{iters}")
-                    plot_batch(batch_hat, self.progress_dir + f"output-iter:{iters}")
-
                     with torch.no_grad():
+                        vae.eval()
+                        sample_batch_hat, _, _ = vae(sample_batch)
                         fake = vae.decode(fixed_latent).detach().cpu()
-                    plot_batch(fake, self.progress_dir + f"gen-iter:{iters}")
+                        vae.train()
+
+                    plot_compare_batch(sample_batch, sample_batch_hat, self.progress_dir + f"comp-iter:{iters}")
+                    plot_batch(fake, self.progress_dir + f"iter:{iters}")
 
                 iters += 1
 
