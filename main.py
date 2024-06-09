@@ -132,5 +132,5 @@ else:
 if args.test:
     model.generate(args.test)
 else:
-    model.train(num_epochs=args.n)
+    model.train()
     model.generate(model.run_dir)
