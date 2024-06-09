@@ -80,7 +80,7 @@ class VAE:
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\tlr: %.10f\tr_loss: %.4f\tkl_loss: %.4f\tloss: %.4f'
                         % (epoch, self.args.n, i, len(self.dataloader),
-                            scheduler.get_last_lr(), reproduction_loss.item(), kl_loss.item(), loss.item()))
+                            scheduler.get_last_lr()[0], reproduction_loss.item(), kl_loss.item(), loss.item()))
                     
 
                 if (iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
