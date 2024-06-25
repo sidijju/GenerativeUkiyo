@@ -31,6 +31,7 @@ parser.add_argument('--lr', type=float, default=1e-6, help='learning rate for tr
 parser.add_argument('--vae', action='store_true', help='train vae model')
 parser.add_argument('--cond', action='store_true', help='train conditional GAN using labels')
 parser.add_argument('--ddpm', action='store_true', help='train denoising diffusion probablistic model')
+parser.add_argument('--checkpoint', type=str, default=None, help='train model from checkpoint')
 
 ### Dataset Flags
 
@@ -61,9 +62,6 @@ if not args.test:
 if torch.cuda.is_available():
     print("Using cuda")
     args.device = torch.device("cuda:0")
-elif torch.backends.mps.is_available():
-    print("Using mps")
-    args.device = torch.device("mps")
 else: 
     print("Using cpu")
     args.device = torch.device("cpu")

@@ -35,10 +35,13 @@ class VAE:
             return
         
         vae = VariationalAutoEncoder(self.args, self.channel_size)
-        vae.apply(weights_init)
+        if self.args.checkpoint:
+            vae.load_state_dict(torch.load(self.args.checkpoint, map_location=self.args.device))
+            print("Loaded checkpoint from", self.args.checkpoint)
+        else:
+            vae.apply(weights_init)
         vae.to(self.args.device)
         optimizer = optim.Adam(vae.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
-        #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', threshold=1e-6)
 
         sample_batch, _ = next(iter(self.dataloader))
         sample_batch = sample_batch.to(self.args.device)
@@ -50,6 +53,8 @@ class VAE:
 
         losses = []
         iters = 0
+        best_loss = None
+        best_reproduction_loss = None
 
         print("### Begin Training Procedure ###")
         for epoch in tqdm(range(self.args.n)):
@@ -69,7 +74,6 @@ class VAE:
                 loss = reproduction_loss + self.beta * kl_loss
                 loss.backward()
                 optimizer.step()
-                #scheduler.step(loss)
 
                 losses.append(loss.item())
 
@@ -82,6 +86,13 @@ class VAE:
                         % (epoch, self.args.n, i, len(self.dataloader),
                             reproduction_loss.item(), kl_loss.item(), loss.item()))
                     
+                    if best_loss is None or loss < best_loss:
+                        best_loss = loss
+                        torch.save(vae.state_dict(), self.run_dir + '/vae-best.pt')
+
+                    if best_reproduction_loss is None or reproduction_loss < best_loss:
+                        best_loss = reproduction_loss
+                        torch.save(vae.state_dict(), self.run_dir + '/vae-best-reproduction.pt')
 
                 if (iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
                     with torch.no_grad():
