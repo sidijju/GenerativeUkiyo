@@ -52,7 +52,9 @@ class VAE:
         loss_fn = nn.MSELoss() if self.args.mse else nn.BCELoss()
 
         if self.args.annealing:
-            beta_schedule = torch.linspace(0, 1, self.args.n * len(self.dataloader))
+            # cyclical annealing schedule
+            beta_schedule = torch.linspace(0, 1, len(self.dataloader))
+            beta_schedule = beta_schedule.repeat(self.args.n)
 
         losses = []
         iters = 0
