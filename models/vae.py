@@ -24,7 +24,10 @@ class VAE:
         self.beta = args.beta
 
         if not self.args.test:
-            self.run_dir = "train/vae-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
+            if self.args.log_dir:
+                self.run_dir = self.args.log_dir + "-vae"
+            else:
+                self.run_dir = "train/vae-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
             self.progress_dir = self.run_dir + "progress/"
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
@@ -53,7 +56,7 @@ class VAE:
 
         if self.args.annealing:
             # cyclical annealing schedule
-            beta_schedule = torch.linspace(0, 1, len(self.dataloader))
+            beta_schedule = torch.linspace(0, self.beta, len(self.dataloader))
             beta_schedule = beta_schedule.repeat(self.args.n)
 
         losses = []
