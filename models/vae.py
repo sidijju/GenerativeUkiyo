@@ -25,7 +25,7 @@ class VAE:
 
         if not self.args.test:
             if self.args.log_dir:
-                self.run_dir = self.args.log_dir + "-vae"
+                self.run_dir = self.args.log_dir + "-vae/"
             else:
                 self.run_dir = "train/vae-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
             self.progress_dir = self.run_dir + "progress/"
