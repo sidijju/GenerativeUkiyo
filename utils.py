@@ -9,15 +9,16 @@ def make_dir(path):
 
 def plot_image(image, path):
     plt.cla()
+    plt.axis('off')
     plt.imshow(image.cpu().permute(1, 2, 0))
-    plt.savefig(path)
+    plt.savefig(path, bbox_inches=0)
 
 def plot_batch(batch, path):
     plt.cla()
     grid = vutils.make_grid(batch.cpu()[:25], nrow = 5, padding=2, normalize=True)
     plt.axis('off')
     plt.imshow(grid.permute(1, 2, 0))
-    plt.savefig(path)
+    plt.savefig(path, bbox_inches=0)
 
 def plot_compare_batch(batch_xy, batch_yhat, path):
     plt.cla()
@@ -27,7 +28,7 @@ def plot_compare_batch(batch_xy, batch_yhat, path):
     grid = vutils.make_grid(grid_images, nrow=2, padding=2, normalize=True)
     plt.axis('off')
     plt.imshow(grid.permute(1, 2, 0))
-    plt.savefig(path)
+    plt.savefig(path, bbox_inches=0)
 
 # utility function to iterate through model
 # and initalize weights in layers rom N(0, 0.02)
