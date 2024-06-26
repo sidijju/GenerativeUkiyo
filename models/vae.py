@@ -75,7 +75,7 @@ class VAE:
                 loss.backward()
                 optimizer.step()
 
-                losses.append(loss.item())
+                losses.append((loss.item(), reproduction_loss.item(), kl_loss.item()))
 
                 #############################
                 ####   Metrics Tracking  ####
@@ -111,6 +111,10 @@ class VAE:
 
     def save_train_data(self, losses, vae):
 
+        elbos = [loss[0] for loss in losses]
+        reps = [loss[1] for loss in losses]
+        kls = [loss[2] for loss in losses]
+
         # save models
         torch.save(vae.state_dict(), self.run_dir + '/vae.pt')
 
@@ -119,7 +123,9 @@ class VAE:
         plt.yscale('log')
         plt.figure(figsize=(10,5))
         plt.title("Training Losses")
-        plt.plot(losses,label="L")
+        plt.plot(elbos,label="ELBO")
+        plt.plot(reps,label="Reproduction")
+        plt.plot(kls,label="KL")
         plt.xlabel("Iterations")
         plt.ylabel("Loss")
         plt.legend()
