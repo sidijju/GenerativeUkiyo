@@ -49,8 +49,9 @@ parser.add_argument('--flip', action='store_true', help='flip label in GANs for 
 parser.add_argument('--t', type=int, default=1000, help='noise timesteps for ddpm')
 parser.add_argument('--b_0', type=float, default=1e-4, help='beta at timestep 0 for ddpm')
 parser.add_argument('--b_t', type=float, default=0.02, help='beta at timestep t for ddpm')
-parser.add_argument('--beta', type=float, default=1.0, help='beta coefficient for KL term in VAE loss')
+parser.add_argument('--beta', type=float, default=.0001, help='beta coefficient for KL term in VAE loss')
 parser.add_argument('--mse', default=False, action='store_true', help='flag for MSE loss in VAE')
+parser.add_argument('--annealing', default=False, action='store_true', help='flag for beta annealing in VAE loss')
 
 args = parser.parse_args()
 

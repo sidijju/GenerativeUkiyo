@@ -51,6 +51,9 @@ class VAE:
 
         loss_fn = nn.MSELoss() if self.args.mse else nn.BCELoss()
 
+        if self.args.annealing:
+            beta_schedule = torch.linspace(0, 1, self.args.n * len(self.dataloader))
+
         losses = []
         iters = 0
         best_loss = None
@@ -71,7 +74,10 @@ class VAE:
                 # KL divergence loss
                 kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-                loss = reproduction_loss + self.beta * kl_loss
+                if self.args.annealing:
+                    loss = reproduction_loss + beta_schedule[iters] * kl_loss
+                else:
+                    loss = reproduction_loss + self.beta * kl_loss
                 loss.backward()
                 optimizer.step()
 
