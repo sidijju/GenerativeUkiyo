@@ -1,4 +1,4 @@
-for learning_rates in .000001
+for learning_rates in .000001 .0001
 do
   for latent_dims in 512
   do
