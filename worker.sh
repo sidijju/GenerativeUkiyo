@@ -1,9 +1,8 @@
 learning_rate=$1
-latent_dim=$2
-beta=$3
+beta=$2
 
 PARENT_DIR="$(dirname $PWD)"
 EXEC_DIR=$PWD
-log_dir="logs/lr=${learning_rate}_latent=${latent_dim}_beta=${beta}"
+log_dir="logs/lr=${learning_rate}_beta=${beta}"
 echo "Current working directory is: $(pwd)"
-python main.py --n 5 --lr ${learning_rate} --latent ${latent_dim} --beta ${beta} --log_dir=${log_dir} --vae --checkpoint checkpoints/vae-n25-beta0.pt
+python main.py --n 8 --lr ${learning_rate} --beta ${beta} --log_dir=${log_dir} --vae --checkpoint checkpoints/vae-n25-beta0.pt

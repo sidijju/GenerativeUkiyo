@@ -1,10 +1,7 @@
-for learning_rates in .0001
+for learning_rates in .000001 .00001 .00005 .0001
 do
-  for latent_dims in 512
+  for betas in .0000001 .000001 .00001
   do
-    for betas in 0 .000001 .00001 1
-    do
-      ./worker.sh $learning_rates $latent_dims $betas
-    done
+    ./worker.sh $learning_rates $betas
   done
 done
