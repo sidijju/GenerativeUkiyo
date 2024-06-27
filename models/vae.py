@@ -126,6 +126,10 @@ class VAE:
         reps = [loss[1] for loss in losses]
         kls = [loss[2] for loss in losses]
 
+        filtered_elbos = elbos[~is_outlier(elbos)]
+        filtered_reps = reps[~is_outlier(kls)]
+        filtered_kls = kls[~is_outlier(kls)]
+
         # save models
         torch.save(vae.state_dict(), self.run_dir + '/vae.pt')
 
@@ -134,7 +138,7 @@ class VAE:
         plt.yscale('log')
         plt.figure(figsize=(10,5))
         plt.title("Training Loss")
-        plt.plot(elbos,label="ELBO")
+        plt.plot(filtered_elbos,label="ELBO")
         plt.xlabel("Iterations")
         plt.ylabel("Loss")
         plt.legend()
@@ -144,7 +148,7 @@ class VAE:
         plt.yscale('log')
         plt.figure(figsize=(10,5))
         plt.title("Training Loss")
-        plt.plot(reps,label="Reproduction")
+        plt.plot(filtered_reps,label="Reproduction")
         plt.xlabel("Iterations")
         plt.ylabel("Loss")
         plt.legend()
@@ -154,7 +158,7 @@ class VAE:
         plt.yscale('log')
         plt.figure(figsize=(10,5))
         plt.title("Training Loss")
-        plt.plot(kls,label="KL")
+        plt.plot(filtered_kls,label="KL")
         plt.xlabel("Iterations")
         plt.ylabel("Loss")
         plt.legend()

@@ -1,5 +1,6 @@
 import os
 import torch.nn as nn
+import numpy as np
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 
@@ -29,6 +30,16 @@ def plot_compare_batch(batch_xy, batch_yhat, path):
     plt.axis('off')
     plt.imshow(grid.permute(1, 2, 0))
     plt.savefig(path, bbox_inches=0)
+
+def is_outlier(points, thresh=3.5):
+    if len(points.shape) == 1:
+        points = points[:,None]
+    median = np.median(points, axis=0)
+    diff = np.sum((points - median)**2, axis=-1)
+    diff = np.sqrt(diff)
+    med_abs_deviation = np.median(diff)
+    modified_z_score = 0.6745 * diff / med_abs_deviation
+    return modified_z_score > thresh
 
 # utility function to iterate through model
 # and initalize weights in layers rom N(0, 0.02)
