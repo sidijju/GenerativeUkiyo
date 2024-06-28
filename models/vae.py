@@ -168,8 +168,7 @@ class VAE:
     def generate(self, path, n = 5):
         print("### Begin Generating Images ###")
         vae = VariationalAutoEncoder(self.args, self.channel_size)
-        vae.load_state_dict(torch.load(path + "/vae.pt"))
-        vae.to(self.args.device)
+        vae.load_state_dict(torch.load(path + "/vae.pt", map_location=self.args.device))
         vae.eval()
 
         noise = torch.randn(n, self.latent_size, 1, 1, device=self.args.device)
