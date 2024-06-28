@@ -45,6 +45,8 @@ and specify the directory with pretrained weights
 
 `--ddpm` - train denoising diffusion probabilistic model
 
+`--checkpoint` - train model from checkpoint specified at filepath
+
 ### Dataset Flags
 
 '--ff' - 'use Flicker Faces 128 x 128 dataset (assuming its already downloaded)'
@@ -67,4 +69,6 @@ and specify the directory with pretrained weights
 
 `--b_t` - beta at timestep t for ddpm
 
-'--beta' - beta coefficient for KL term in VAE loss
+`--beta` - beta coefficient for KL term in VAE loss
+
+`--annealing` - use beta annealing schedule in VAE
