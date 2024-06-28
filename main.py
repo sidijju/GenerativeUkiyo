@@ -12,7 +12,7 @@ from models.dc_gan import DCGAN
 from models.cdc_gan import CDCGAN
 from models.vae import VAE
 from models.ddpm import DDPM
-from dataset import *
+from data.dataset import *
 
 from utils import make_dir
 

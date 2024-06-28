@@ -5,5 +5,7 @@
 *.jpg
 *.png
 train
+data/process.py
+data/scraper.py
 .venv
 checkpoints
