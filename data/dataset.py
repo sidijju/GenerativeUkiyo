@@ -7,7 +7,8 @@ from torchvision.io import read_image
 class JapArtDataset(Dataset):
 
     def __init__(self, args, transform=None):
-        self.img_dir = args.augment if args.augment else 'jap-art/'
+        self.img_dir = args.augment if args.augment else 'data/jap-art/'
+        print(self.img_dir)
         self.dim = args.dim
         self.transform = transform
 
@@ -25,6 +26,7 @@ class JapArtDataset(Dataset):
         self.labels_map = dict(zip(self.labels_names, range(len(self.labels_names))))
 
         for f in glob.glob(self.img_dir + "*/*.jpg"):
+            print(f)
             string_label = f.split('/')[-2]
             label = self.labels_map[string_label]
             self.img_names.append(f)
@@ -78,7 +80,7 @@ class JapArtDataset(Dataset):
 class FlickerFacesDataset(Dataset):
 
     def __init__(self, args, transform=None):
-        self.img_dir = args.augment if args.augment else 'ff/real_faces_128'
+        self.img_dir = args.augment if args.augment else 'data/ff/real_faces_128'
         self.dim = args.dim
         self.transform = transform
 
