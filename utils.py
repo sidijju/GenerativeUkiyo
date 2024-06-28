@@ -32,8 +32,6 @@ def plot_compare_batch(batch_xy, batch_yhat, path):
     plt.savefig(path, bbox_inches=0)
 
 def is_outlier(points, thresh=3.5):
-    if len(points.shape) == 1:
-        points = points[:,None]
     median = np.median(points, axis=0)
     diff = np.sum((points - median)**2, axis=-1)
     diff = np.sqrt(diff)
