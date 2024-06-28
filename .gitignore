@@ -5,6 +5,7 @@
 *.jpg
 *.png
 train
+visualizations
 data/process.py
 data/scraper.py
 .venv
