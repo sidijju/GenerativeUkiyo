@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 from datetime import datetime
+from scipy.signal import savgol_filter
 
 from utils import *
 
@@ -126,9 +127,9 @@ class VAE:
         reps = [loss[1] for loss in losses]
         kls = [loss[2] for loss in losses]
 
-        filtered_elbos = elbos[~is_outlier(elbos)]
-        filtered_reps = reps[~is_outlier(kls)]
-        filtered_kls = kls[~is_outlier(kls)]
+        filtered_elbos = savgol_filter(elbos, 51, 2)
+        filtered_reps = savgol_filter(reps, 51, 2)
+        filtered_kls = savgol_filter(kls, 51, 2)
 
         # save models
         torch.save(vae.state_dict(), self.run_dir + '/vae.pt')
