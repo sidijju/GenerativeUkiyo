@@ -30,9 +30,10 @@ class DCGAN(GAN):
             plot_image(fake[i], path + f"/f_{i}")
         print("### Done Generating Images ###")
         
-    def train(self, 
-            g_lr = .0001,
-            d_lr = .0004):
+    def train(self):
+        
+        d_lr = self.args.lr
+        g_lr = self.args.lr * 2
         
         d_net = Discriminator(self.args, self.channel_size)
         d_net.apply(weights_init)
@@ -63,20 +64,18 @@ class DCGAN(GAN):
         print("### Begin Training Procedure ###")
         for epoch in tqdm(range(self.args.n)):
             for i, batch in enumerate(self.dataloader, 0):
-                batch, labels = batch
+                batch, _ = batch
                 batch = batch.to(self.args.device)
-                labels = labels.to(self.args.device)
-                batchsize = batch.shape[0]
 
                 if iters == 0:
                     plot_batch(batch, self.progress_dir + f"train_example")
 
                 # generate fake batch for training
-                noise = torch.randn(batchsize, self.latent_size, 1, 1, device=self.args.device)
+                noise = torch.randn(self.args.batchsize, self.latent_size, 1, 1, device=self.args.device)
                 fake_batch = g_net(noise)
 
-                real_labels = torch.full((batchsize,), real_label, dtype=torch.float, device=self.args.device)
-                fake_labels = torch.full((batchsize,), fake_label, dtype=torch.float, device=self.args.device)
+                real_labels = torch.full((self.args.batchsize,), real_label, dtype=torch.float, device=self.args.device)
+                fake_labels = torch.full((self.args.batchsize,), fake_label, dtype=torch.float, device=self.args.device)
 
                 #############################
                 #### Train Discriminator ####
