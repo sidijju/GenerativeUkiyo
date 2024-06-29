@@ -3,6 +3,9 @@ import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
+import torchvision.transforms.v2 as v2
+
+to_512 = v2.Resize(512)
 
 def make_dir(path):
     if not os.path.exists(path):
@@ -11,7 +14,8 @@ def make_dir(path):
 def plot_image(image, path):
     plt.cla()
     plt.axis('off')
-    plt.imshow(image.cpu().permute(1, 2, 0))
+    new_image = to_512(image).cpu().permute(1, 2, 0)
+    plt.imshow(new_image)
     plt.savefig(path, bbox_inches=0)
 
 def plot_batch(batch, path):
