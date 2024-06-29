@@ -173,7 +173,7 @@ class Generator(nn.Module):
                 for in_f, out_f in zip(hidden_dims[:-1], hidden_dims[1:])
             ],
             P.spectral_norm(nn.ConvTranspose2d(ngf, channel_size, 4, 2, 1, bias=False)),
-            nn.Tanh()
+            nn.Sigmoid()
         )
 
     def conv_block(self, input, output, kernel, stride=2, pad=1):
