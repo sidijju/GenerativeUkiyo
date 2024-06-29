@@ -51,7 +51,7 @@ class DCGAN(GAN):
         g_net = Generator(self.args, self.channel_size, self.latent_size)
         if self.args.checkpoint_g:
             g_net.load_state_dict(torch.load(self.args.checkpoint_g, map_location=self.args.device))
-            print("Loaded generator checkpoint from", self.args.checkpoint_d)
+            print("Loaded generator checkpoint from", self.args.checkpoint_g)
         else:
             g_net.apply(weights_init)
             g_net.to(self.args.device)
