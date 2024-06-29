@@ -41,7 +41,7 @@ class DCGAN(GAN):
             print("Loaded discriminator checkpoint from", self.args.checkpoint_d)
         else:
             d_net.apply(weights_init)
-            d_net.to(self.args.device)
+        d_net.to(self.args.device)
         d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr, betas=(0.5, 0.999))
 
         ### Feature matching
@@ -54,7 +54,7 @@ class DCGAN(GAN):
             print("Loaded generator checkpoint from", self.args.checkpoint_g)
         else:
             g_net.apply(weights_init)
-            g_net.to(self.args.device)
+        g_net.to(self.args.device)
         g_optimizer = optim.Adam(g_net.parameters(), lr=g_lr, betas=(0.5, 0.999))
 
         mse = nn.MSELoss()
