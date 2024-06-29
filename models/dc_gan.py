@@ -36,15 +36,25 @@ class DCGAN(GAN):
         g_lr = self.args.lr * 2
         
         d_net = Discriminator(self.args, self.channel_size)
-        d_net.apply(weights_init)
-        d_net.to(self.args.device)
+        if self.args.checkpoint_d:
+            d_net.load_state_dict(torch.load(self.args.checkpoint_d, map_location=self.args.device))
+            print("Loaded discriminator checkpoint from", self.args.checkpoint_d)
+        else:
+            d_net.apply(weights_init)
+            d_net.to(self.args.device)
         d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr, betas=(0.5, 0.999))
+
+        ### Feature matching
         if self.args.fm:
             d_net.model.register_forward_hook(d_net.feature_activations)
 
         g_net = Generator(self.args, self.channel_size, self.latent_size)
-        g_net.apply(weights_init)
-        g_net.to(self.args.device)
+        if self.args.checkpoint_g:
+            g_net.load_state_dict(torch.load(self.args.checkpoint_g, map_location=self.args.device))
+            print("Loaded generator checkpoint from", self.args.checkpoint_d)
+        else:
+            g_net.apply(weights_init)
+            g_net.to(self.args.device)
         g_optimizer = optim.Adam(g_net.parameters(), lr=g_lr, betas=(0.5, 0.999))
 
         mse = nn.MSELoss()
@@ -122,7 +132,6 @@ class DCGAN(GAN):
                     else:
                         g_loss = bce(output, real_labels)
                 
-                # to check for vanishing gradients or exploding gradients
                 g_loss.backward()
                 # D(G(z))
                 dgz_2 = output.mean().item()
