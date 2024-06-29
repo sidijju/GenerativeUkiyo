@@ -33,9 +33,6 @@ class DCGAN(GAN):
     def train(self, 
             g_lr = .0001,
             d_lr = .0004):
-
-        if not self.dataloader:
-            return
         
         d_net = Discriminator(self.args, self.channel_size)
         d_net.apply(weights_init)
@@ -149,6 +146,7 @@ class DCGAN(GAN):
 
                     with torch.no_grad():
                         fake = g_net(fixed_latent).detach()
+
                     plot_batch(fake, self.progress_dir + f"iter:{iters}")
 
                 iters += 1
@@ -161,19 +159,19 @@ class DCGAN(GAN):
 ####   Generator   #####
 
 class Generator(nn.Module):
-    def __init__(self, args, channel_size, latent_size):
+    def __init__(self, args, channel_size, latent_size, dim_mults = (1, 2, 4, 8, 16)):
         super(Generator, self).__init__()
         self.args = args
 
         ngf = 64
+        hidden_dims = [ngf * mult for mult in reversed(list(dim_mults))]
 
         self.model = nn.Sequential(
             self.conv_block(latent_size, ngf * 16, 4, stride=1, pad=0),
-            #self.conv_block(ngf * 32, ngf * 16, 4),
-            self.conv_block(ngf * 16, ngf * 8, 4),
-            self.conv_block(ngf * 8, ngf * 4, 4),
-            self.conv_block(ngf * 4, ngf * 2, 4),
-            self.conv_block(ngf * 2, ngf * 1, 4),
+            *[
+                self.conv_block(in_f, out_f, 4)
+                for in_f, out_f in zip(hidden_dims[:-1], hidden_dims[1:])
+            ],
             P.spectral_norm(nn.ConvTranspose2d(ngf, channel_size, 4, 2, 1, bias=False)),
             nn.Tanh()
         )
@@ -182,7 +180,7 @@ class Generator(nn.Module):
         return nn.Sequential(
             P.spectral_norm(nn.ConvTranspose2d(input, output, kernel, stride, pad, bias=False)),
             nn.BatchNorm2d(output),
-            nn.ReLU(True),
+            nn.LeakyReLU(True),
         )
 
     def forward(self, input):
@@ -193,22 +191,22 @@ class Generator(nn.Module):
 ##### Discriminator #####
 
 class Discriminator(nn.Module):
-    def __init__(self, args, channel_size):
+    def __init__(self, args, channel_size, dim_mults = (1, 2, 4, 8, 16)):
         super(Discriminator, self).__init__()
         self.args = args
 
         ndf = 64
+        hidden_dims = [ndf * mult for mult in list(dim_mults)]
 
-        self.model = nn.Sequential(
+        self.model= nn.Sequential(
             self.conv_block(channel_size, ndf, 4, batchnorm=False),
-            self.conv_block(ndf, ndf * 2, 4),
-            self.conv_block(ndf * 2, ndf * 4, 4),
-            self.conv_block(ndf * 4, ndf * 8, 4),
-            self.conv_block(ndf * 8, ndf * 16, 4),
-            #self.conv_block(ndf * 16, ndf * 32, 4),
+            *[
+                self.conv_block(in_f, out_f, 4)
+                for in_f, out_f in zip(hidden_dims[:-1], hidden_dims[1:])
+            ]
         )
 
-        self.conv = P.spectral_norm(nn.Conv2d(ndf * 16, 1, 4, 1, 0, bias=False))
+        self.conv = P.spectral_norm(nn.Conv2d(hidden_dims[-1], 1, 4, 1, 0, bias=False))
         self.sig = nn.Sigmoid()
 
     def conv_block(self, input, output, kernel, batchnorm=True):

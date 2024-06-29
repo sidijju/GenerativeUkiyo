@@ -45,14 +45,22 @@ parser.add_argument('--test', type=str, default=None, help='test model with weig
 
 ### Additional Flags
 
-parser.add_argument('--fm', action='store_true', help='turn feature matching on for GANs')
-parser.add_argument('--flip', action='store_true', help='flip label in GANs for better gradient flow')
-parser.add_argument('--t', type=int, default=1000, help='noise timesteps for ddpm')
-parser.add_argument('--b_0', type=float, default=1e-4, help='beta at timestep 0 for ddpm')
-parser.add_argument('--b_t', type=float, default=0.02, help='beta at timestep t for ddpm')
+### VAE
+
 parser.add_argument('--beta', type=float, default=.0001, help='beta coefficient for KL term in VAE loss')
 parser.add_argument('--mse', default=False, action='store_true', help='flag for MSE loss in VAE')
 parser.add_argument('--annealing', default=False, action='store_true', help='flag for beta annealing in VAE loss')
+
+### GAN
+
+parser.add_argument('--fm', action='store_true', help='turn feature matching on for GANs')
+parser.add_argument('--flip', action='store_true', help='flip label in GANs for better gradient flow')
+
+### DDPM
+
+parser.add_argument('--t', type=int, default=1000, help='noise timesteps for ddpm')
+parser.add_argument('--b_0', type=float, default=1e-4, help='beta at timestep 0 for ddpm')
+parser.add_argument('--b_t', type=float, default=0.02, help='beta at timestep t for ddpm')
 
 args = parser.parse_args()
 

@@ -1,25 +1,23 @@
 import matplotlib.pyplot as plt
 import torch
-from datetime import datetime
 from abc import ABC
 from utils import *
+from scipy.signal import savgol_filter
 
 class GAN(ABC):
 
     def __init__(self, 
                 args,
                 dataloader = None,
-                workers = 2,
                 ):
         
         self.args = args
         self.dataloader = dataloader
-        self.workers = workers
         self.channel_size = args.channel_size
         self.latent_size = args.latent
 
         if not self.args.test:
-            self.run_dir = "train/gan-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
+            self.run_dir = f"train/gan-n={self.args.n}/"
             self.progress_dir = self.run_dir + "progress/"
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
@@ -30,13 +28,17 @@ class GAN(ABC):
         torch.save(d_net.state_dict(), self.run_dir + '/discriminator.pt')
         torch.save(g_net.state_dict(), self.run_dir + '/generator.pt')
 
+        filtered_g = savgol_filter(g_losses, 51, 3)
+        filtered_d_real = savgol_filter(d_losses_real, 51, 3)
+        filtered_d_fake = savgol_filter(d_losses_fake, 51, 3)
+
         # save losses
         plt.cla()
         plt.figure(figsize=(10,5))
         plt.yscale('log')
         plt.title("Training Losses")
-        plt.plot(g_losses,label="G")
-        plt.plot([sum(x)/2 for x in zip(d_losses_real, d_losses_fake)], label="D")
+        plt.plot(filtered_g, label="G")
+        plt.plot([sum(x)/2 for x in zip(filtered_d_real, filtered_d_fake)], label="D")
         plt.xlabel("Iterations")
         plt.ylabel("Loss")
         plt.legend()
