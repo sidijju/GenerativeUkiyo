@@ -66,16 +66,17 @@ class DCGAN(GAN):
             for i, batch in enumerate(self.dataloader, 0):
                 batch, _ = batch
                 batch = batch.to(self.args.device)
+                batchsize = batch.shape[0]
 
                 if iters == 0:
                     plot_batch(batch, self.progress_dir + f"train_example")
 
                 # generate fake batch for training
-                noise = torch.randn(self.args.batchsize, self.latent_size, 1, 1, device=self.args.device)
+                noise = torch.randn(batchsize, self.latent_size, 1, 1, device=self.args.device)
                 fake_batch = g_net(noise)
 
-                real_labels = torch.full((self.args.batchsize,), real_label, dtype=torch.float, device=self.args.device)
-                fake_labels = torch.full((self.args.batchsize,), fake_label, dtype=torch.float, device=self.args.device)
+                real_labels = torch.full((batchsize,), real_label, dtype=torch.float, device=self.args.device)
+                fake_labels = torch.full((batchsize,), fake_label, dtype=torch.float, device=self.args.device)
 
                 #############################
                 #### Train Discriminator ####
