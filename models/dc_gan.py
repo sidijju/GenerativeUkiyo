@@ -33,7 +33,7 @@ class DCGAN(GAN):
     def train(self):
         
         d_lr = self.args.lr
-        g_lr = self.args.lr * 2
+        g_lr = self.args.lr
         
         d_net = Discriminator(self.args, self.channel_size)
         if self.args.checkpoint_d:
@@ -145,7 +145,7 @@ class DCGAN(GAN):
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\td_loss: %.4f\tg_loss: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                         % (epoch, self.args.n, i, len(self.dataloader),
-                            (d_loss_real.item() + d_loss_fake.item())/2, g_loss.item(), dx, dgz_1, dgz_2))
+                            d_loss_real.item() + d_loss_fake.item(), g_loss.item(), dx, dgz_1, dgz_2))
 
                 d_losses_real.append(d_loss_real.item())
                 d_losses_fake.append(d_loss_fake.item())
@@ -189,7 +189,7 @@ class Generator(nn.Module):
         return nn.Sequential(
             P.spectral_norm(nn.ConvTranspose2d(input, output, kernel, stride, pad, bias=False)),
             nn.BatchNorm2d(output),
-            nn.LeakyReLU(True),
+            nn.ReLU(True),
         )
 
     def forward(self, input):
@@ -208,33 +208,27 @@ class Discriminator(nn.Module):
         hidden_dims = [ndf * mult for mult in list(dim_mults)]
 
         self.model= nn.Sequential(
-            self.conv_block(channel_size, ndf, 4, batchnorm=False),
+            P.spectral_norm(nn.Conv2d(channel_size, ndf, 4, 2, 1, bias=False)),
+            nn.LeakyReLU(0.2, inplace=True),
             *[
                 self.conv_block(in_f, out_f, 4)
                 for in_f, out_f in zip(hidden_dims[:-1], hidden_dims[1:])
-            ]
+            ],
+            P.spectral_norm(nn.Conv2d(hidden_dims[-1], 1, 4, 1, 0, bias=False)),
+            nn.Sigmoid()
         )
 
-        self.conv = P.spectral_norm(nn.Conv2d(hidden_dims[-1], 1, 4, 1, 0, bias=False))
-        self.sig = nn.Sigmoid()
-
-    def conv_block(self, input, output, kernel, batchnorm=True):
-        if batchnorm:
-            return nn.Sequential(
-                P.spectral_norm(nn.Conv2d(input, output, kernel, 2, 1, bias=False)),
-                nn.BatchNorm2d(output),
-                nn.LeakyReLU(0.2, inplace=True),
-            )
-        else:
-            return nn.Sequential(
-                P.spectral_norm(nn.Conv2d(input, output, kernel, 2, 1, bias=False)),
-                nn.LeakyReLU(0.2, inplace=True),
-            )
+    def conv_block(self, input, output, kernel):
+        return nn.Sequential(
+            P.spectral_norm(nn.Conv2d(input, output, kernel, 2, 1, bias=False)),
+            nn.BatchNorm2d(output),
+            nn.LeakyReLU(0.2, inplace=True),
+        )
     
     def feature_activations(self, model, input, output):
         self.features = output
     
     def forward(self, input):
-        return self.sig(self.conv(self.model(input)))
+        return self.model(input)
     
 #########################

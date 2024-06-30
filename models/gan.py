@@ -17,7 +17,7 @@ class GAN(ABC):
         self.latent_size = args.latent
 
         if not self.args.test:
-            self.run_dir = f"train/gan-n={self.args.n}/"
+            self.run_dir = f"train/gan-n={self.args.n}_lr={self.args.lr}/"
             self.progress_dir = self.run_dir + "progress/"
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
@@ -31,21 +31,45 @@ class GAN(ABC):
         filtered_g = savgol_filter(g_losses, 51, 3)
         filtered_d_real = savgol_filter(d_losses_real, 51, 3)
         filtered_d_fake = savgol_filter(d_losses_fake, 51, 3)
+        filtered_d = filtered_d_real + filtered_d_fake
 
         # save losses
         plt.cla()
         plt.figure(figsize=(10,5))
         plt.yscale('log')
         plt.title("Training Losses")
+        plt.plot(filtered_d + filtered_g, label="Loss")
         plt.plot(filtered_g, label="G")
-        plt.plot([sum(x)/2 for x in zip(filtered_d_real, filtered_d_fake)], label="D")
+        plt.plot(filtered_d, label="D")
         plt.xlabel("Iterations")
         plt.ylabel("Loss")
         plt.legend()
         plt.savefig(self.run_dir + "train_losses")
+ 
+        plt.cla()
+        plt.figure(figsize=(10,5))
+        plt.yscale('log')
+        plt.title("Training Losses")
+        plt.plot(filtered_g, label="G")
+        plt.xlabel("Iterations")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.savefig(self.run_dir + "g_losses")
+
+        plt.cla()
+        plt.figure(figsize=(10,5))
+        plt.yscale('log')
+        plt.title("Training Losses")
+        plt.plot(filtered_d, label="D")
+        plt.plot(filtered_d_real, label="D_real")
+        plt.plot(filtered_d_fake, label="D_fake")
+        plt.xlabel("Iterations")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.savefig(self.run_dir + "d_losses")
                 
     def generate(self, path, n = 5):
         pass
 
-    def train(self, g_lr = .0001, d_lr = .0004):
+    def train(self):
         pass
