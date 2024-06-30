@@ -17,7 +17,7 @@ class GAN(ABC):
         self.latent_size = args.latent
 
         if not self.args.test:
-            self.run_dir = f"train/gan-n={self.args.n}_lr={self.args.lr}/"
+            self.run_dir = f"train/gan-n={self.args.n}_lr={self.args.lr}_batch={self.args.batchsize}/"
             self.progress_dir = self.run_dir + "progress/"
             make_dir(self.run_dir)
             make_dir(self.progress_dir)

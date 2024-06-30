@@ -154,7 +154,9 @@ class DCGAN(GAN):
                 if (iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
 
                     with torch.no_grad():
+                        g_net.eval()
                         fake = g_net(fixed_latent).detach()
+                        g_net.train()
 
                     plot_batch(fake, self.progress_dir + f"iter:{iters}")
 
@@ -176,7 +178,7 @@ class Generator(nn.Module):
         hidden_dims = [ngf * mult for mult in reversed(list(dim_mults))]
 
         self.model = nn.Sequential(
-            self.conv_block(latent_size, ngf * 16, 4, stride=1, pad=0),
+            self.conv_block(latent_size, hidden_dims[0], 4, stride=1, pad=0),
             *[
                 self.conv_block(in_f, out_f, 4)
                 for in_f, out_f in zip(hidden_dims[:-1], hidden_dims[1:])
