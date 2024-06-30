@@ -52,10 +52,6 @@ parser.add_argument('--beta', type=float, default=.0001, help='beta coefficient 
 parser.add_argument('--mse', default=False, action='store_true', help='flag for MSE loss in VAE')
 parser.add_argument('--annealing', default=False, action='store_true', help='flag for beta annealing in VAE loss')
 
-### GAN
-
-parser.add_argument('--fm', action='store_true', help='turn feature matching on for GANs')
-
 ### DDPM
 
 parser.add_argument('--t', type=int, default=1000, help='noise timesteps for ddpm')

@@ -44,9 +44,6 @@ class DCGAN(GAN):
         d_net.to(self.args.device)
         d_optimizer = optim.Adam(d_net.parameters(), lr=d_lr, betas=(0.5, 0.999))
 
-        ### Feature matching
-        if self.args.fm:
-            d_net.model.register_forward_hook(d_net.feature_activations)
 
         g_net = Generator(self.args, self.channel_size, self.latent_size)
         if self.args.checkpoint_g:
@@ -57,7 +54,6 @@ class DCGAN(GAN):
         g_net.to(self.args.device)
         g_optimizer = optim.Adam(g_net.parameters(), lr=g_lr, betas=(0.5, 0.999))
 
-        mse = nn.MSELoss()
         bce = nn.BCELoss()
 
         fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
@@ -119,14 +115,7 @@ class DCGAN(GAN):
                 g_net.zero_grad()
                 output = d_net(fake_batch).view(-1)
 
-                if self.args.fm:
-                    # Feature matching objective from "Improved Techniques for Training GANs"
-                    e_fx = fx.mean(dim=0)
-                    fgz = d_net.features
-                    e_fgz = fgz.mean(dim=0)
-                    g_loss = torch.square(mse(e_fx, e_fgz))
-                else:      
-                    g_loss = bce(output, real_labels)
+                g_loss = bce(output, real_labels)
                 g_loss.backward()
                 # D(G(z))
                 dgz_2 = output.mean().item()
@@ -221,9 +210,6 @@ class Discriminator(nn.Module):
             nn.BatchNorm2d(output),
             nn.LeakyReLU(0.2, inplace=True),
         )
-    
-    def feature_activations(self, model, input, output):
-        self.features = output
     
     def forward(self, input):
         return self.model(input)
