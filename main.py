@@ -9,7 +9,6 @@ from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 
 from models.dc_gan import DCGAN
-from models.cdc_gan import CDCGAN
 from models.vae import VAE
 from models.ddpm import DDPM
 from data.dataset import *
@@ -30,8 +29,8 @@ parser.add_argument('--log_dir', type=str, default=None, help='log dir for train
 ### Model Flags
 
 parser.add_argument('--vae', action='store_true', help='train vae model')
-parser.add_argument('--cond', action='store_true', help='train conditional GAN using labels')
 parser.add_argument('--ddpm', action='store_true', help='train denoising diffusion probablistic model')
+
 parser.add_argument('--checkpoint', type=str, default=None, help='train model from checkpoint')
 parser.add_argument('--checkpoint_g', type=str, default=None, help='train generator model from checkpoint')
 parser.add_argument('--checkpoint_d', type=str, default=None, help='train discriminator model from checkpoint')
@@ -56,7 +55,6 @@ parser.add_argument('--annealing', default=False, action='store_true', help='fla
 ### GAN
 
 parser.add_argument('--fm', action='store_true', help='turn feature matching on for GANs')
-parser.add_argument('--flip', action='store_true', help='flip label in GANs for better gradient flow')
 
 ### DDPM
 
@@ -134,8 +132,6 @@ if args.ddpm:
     model = DDPM(args, dataloader)
 elif args.vae:
     model = VAE(args, dataloader)
-# elif args.cond:
-#     model = CDCGAN(args, dataloader)
 else:
     model = DCGAN(args, dataloader)
 

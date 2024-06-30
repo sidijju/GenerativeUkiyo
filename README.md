@@ -41,8 +41,6 @@ and specify the directory with pretrained weights
 
 `--vae` - train variational autoencoder 
 
-`--cond` - train conditional DCGAN with category labels
-
 `--ddpm` - train denoising diffusion probabilistic model
 
 `--checkpoint` - train model from checkpoint specified at filepath
@@ -60,8 +58,6 @@ and specify the directory with pretrained weights
 ### Additional Flags
 
 `--fm` - turn on feature matching objective for GANs from ["Improved Techniques for Training GANs"](https://arxiv.org/pdf/1606.03498)
-
-`--flip` - flip label for better gradient flow in early iterations of training
 
 `--t` - noise timesteps for ddpm
 
