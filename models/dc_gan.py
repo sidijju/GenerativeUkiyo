@@ -125,13 +125,8 @@ class DCGAN(GAN):
                     fgz = d_net.features
                     e_fgz = fgz.mean(dim=0)
                     g_loss = torch.square(mse(e_fx, e_fgz))
-                else:
-                    # Flip label option for better gradient flow
-                    if self.args.flip:
-                        g_loss = bce(output, fake_labels)
-                    else:
-                        g_loss = bce(output, real_labels)
-                
+                else:      
+                    g_loss = bce(output, real_labels)
                 g_loss.backward()
                 # D(G(z))
                 dgz_2 = output.mean().item()
