@@ -21,7 +21,7 @@ class DDPM:
         self.channel_size = args.channel_size
 
         if not self.args.test:
-            self.run_dir = "train/ddpm-" + datetime.now().strftime("%Y-%m-%d(%H:%M:%S)" + "/")
+            self.run_dir = "train/ddpm-t={self.args.t}_lr={self.args.lr}/"
             self.progress_dir = self.run_dir + "progress/"
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
@@ -163,7 +163,9 @@ class DDPM:
                 if (iters > 0 and iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
 
                     with torch.no_grad():
+                        noise_net.eval()
                         fake = self.sample(noise_net, batch.shape)[-1]
+                        noise_net.train()
                     plot_batch(fake, self.progress_dir + f"iter:{iters}")
 
                 iters += 1
@@ -192,8 +194,7 @@ class NoiseNet(nn.Module):
         self.ups = []
 
         num_resolutions = len(dim_mults)
-        dims = [init_dim]
-        dims += [init_dim * mult for mult in dim_mults]
+        dims = [init_dim] + [init_dim * mult for mult in dim_mults]
         resolutions = [int(args.dim * r) for r in torch.cumprod(torch.ones(num_resolutions) * 0.5, dim=0).tolist()]
         in_out_res = list(enumerate(zip(dims[:-1], dims[1:], resolutions)))
 
@@ -310,7 +311,6 @@ class SelfAttention(nn.Module):
 class Downsample(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        #self.model = nn.Conv2d(in_channels, out_channels, 1)
 
         self.model = nn.Sequential(
             Rearrange("b c (h p1) (w p2) -> b (c p1 p2) h w", p1=2, p2=2),
