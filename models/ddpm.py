@@ -51,6 +51,15 @@ class DDPM:
         self.sqrt_recip_alpha = 1 / self.sqrt_alpha_bar
         self.sqrt_recip_one_minus_alpha_bar = 1 / self.sqrt_one_minus_alpha_bar
 
+        print(self.beta.shape)
+        print(self.alpha.shape)
+        print(self.alpha_bar.shape)
+        print(self.alpha_bar_prev.shape)
+        print(self.sqrt_alpha_bar.shape)
+        print(self.sqrt_one_minus_alpha_bar.shape)
+        print(self.sqrt_recip_alpha.shape)
+        print(self.sqrt_recip_one_minus_alpha_bar.shape)
+
     def noise_t(self, x, t):
         sqrt_alpha_bar = self.__extract(self.sqrt_alpha_bar[t])
         sqrt_one_minus_alpha_bar = self.__extract(self.sqrt_one_minus_alpha_bar[t])
