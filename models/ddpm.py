@@ -61,19 +61,19 @@ class DDPM:
         print(self.sqrt_recip_one_minus_alpha_bar.shape)
 
     def noise_t(self, x, t):
-        #sqrt_alpha_bar = self.__extract(self.sqrt_alpha_bar[t])
-        #sqrt_one_minus_alpha_bar = self.__extract(self.sqrt_one_minus_alpha_bar[t])
+        sqrt_alpha_bar = self.sqrt_alpha_bar[t]
+        sqrt_one_minus_alpha_bar = self.sqrt_one_minus_alpha_bar[t]
         noise = torch.randn_like(x, device=self.args.device)
-        noise_x = self.sqrt_alpha_bar[t] * x + self.sqrt_one_minus_alpha_bar[t] * noise
+        noise_x = sqrt_alpha_bar * x + sqrt_one_minus_alpha_bar * noise
         return noise_x, noise
     
     def sample_t(self, noise_net, x, t, noise):
         with torch.no_grad():
             noise_pred = noise_net(x, t)
-        beta = self.__extract(self.beta[t])
-        alpha = self.__extract(self.alpha[t])
-        sqrt_recip_alpha = self.__extract(self.sqrt_recip_alpha[t])
-        sqrt_recip_one_minus_alpha_bar = self.__extract(self.sqrt_recip_one_minus_alpha_bar[t])
+        beta = self.beta[t]
+        alpha = self.alpha[t]
+        sqrt_recip_alpha = self.sqrt_recip_alpha[t]
+        sqrt_recip_one_minus_alpha_bar = self.sqrt_recip_one_minus_alpha_bar[t]
         sample = sqrt_recip_alpha * (x - ((1 - alpha) / sqrt_recip_one_minus_alpha_bar) * noise_pred) + torch.sqrt(beta) * noise
         return sample.clamp(-1, 1)
     
@@ -146,6 +146,10 @@ class DDPM:
                 batch_t = torch.randint_like(labels, high=self.args.t+1, device=self.args.device)
                 batch = batch.to(self.args.device)
                 labels = labels.to(self.args.device)
+
+                print(batch.shape)
+                print(batch_t.shape)
+                print(labels.shape)
 
                 batch_noised_images, batch_noise = self.noise_t(batch, batch_t)
                 batch_t = batch_t[:, None]
