@@ -92,8 +92,6 @@ class DCGAN(GAN):
 
                 # loss on real inputs
                 output = d_net(batch).view(-1)
-                if self.args.fm:
-                    fx = d_net.features.detach().clone()
                 d_loss_real = bce(output, real_labels)
                 d_loss_real.backward()
                 # D(x)
