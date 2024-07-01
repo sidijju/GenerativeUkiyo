@@ -7,6 +7,16 @@ import torchvision.transforms.v2 as v2
 
 to_512 = v2.Resize(512)
 
+def scale_image(image, inverse=False):
+    if inverse:
+        # input of -1 to 1 image
+        # scale to 0 to 1 image
+        return (image + 1)/2
+    else:
+        # input of 0 to 1 image
+        # scale to -1 to 1 image
+        return image * 2 - 1
+
 def make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
