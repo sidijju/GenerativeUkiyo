@@ -160,7 +160,7 @@ class DDPM:
 
                 losses.append(mse_loss.item())
 
-                if (iters > 0 and iters % 5000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
+                if (iters % 1000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
 
                     with torch.no_grad():
                         noise_net.eval()
