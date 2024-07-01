@@ -61,10 +61,10 @@ class DDPM:
         print(self.sqrt_recip_one_minus_alpha_bar.shape)
 
     def noise_t(self, x, t):
-        sqrt_alpha_bar = self.__extract(self.sqrt_alpha_bar[t])
-        sqrt_one_minus_alpha_bar = self.__extract(self.sqrt_one_minus_alpha_bar[t])
+        #sqrt_alpha_bar = self.__extract(self.sqrt_alpha_bar[t])
+        #sqrt_one_minus_alpha_bar = self.__extract(self.sqrt_one_minus_alpha_bar[t])
         noise = torch.randn_like(x, device=self.args.device)
-        noise_x = sqrt_alpha_bar * x + sqrt_one_minus_alpha_bar * noise
+        noise_x = self.sqrt_alpha_bar[t] * x + self.sqrt_one_minus_alpha_bar[t] * noise
         return noise_x, noise
     
     def sample_t(self, noise_net, x, t, noise):
