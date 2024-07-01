@@ -12,16 +12,14 @@ class DDPM:
     def __init__(self,
                  args,
                  dataloader = None,
-                 workers = 2,
                  ):
         
         self.args = args
         self.dataloader = dataloader
-        self.workers = workers
         self.channel_size = args.channel_size
 
         if not self.args.test:
-            self.run_dir = "train/ddpm-t={self.args.t}_lr={self.args.lr}/"
+            self.run_dir = f"train/ddpm-n={self.args.n}_t={self.args.t}_lr={self.args.lr}/"
             self.progress_dir = self.run_dir + "progress/"
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
@@ -32,7 +30,7 @@ class DDPM:
         for _ in range(4 - len(t.shape)):
             t = torch.unsqueeze(t, -1)
         return t
-
+    
     def prepare_noise_schedule(self):
         self.b_0 = self.args.b_0
         self.b_t = self.args.b_t
@@ -40,48 +38,49 @@ class DDPM:
         self.beta = torch.linspace(self.args.b_0, self.args.b_t, self.args.t, device=self.args.device)
         self.alpha = 1 - self.beta
         self.alpha_bar = torch.cumprod(self.alpha, dim=0).to(self.args.device)
-        self.alpha_bar_prev = torch.roll(self.alpha_bar, 1, 0).to(self.args.device)
-        self.alpha_bar_prev[0] = 1.0
+        # self.alpha_bar_prev = torch.roll(self.alpha_bar, 1, 0).to(self.args.device)
+        # self.alpha_bar_prev[0] = 1.0
         
         # noise coefficients
         self.sqrt_alpha_bar = torch.sqrt(self.alpha_bar)
         self.sqrt_one_minus_alpha_bar = torch.sqrt(1 - self.alpha_bar)
 
         # denoise coefficients
-        self.sqrt_recip_alpha = 1 / self.sqrt_alpha_bar
-        self.sqrt_recip_one_minus_alpha_bar = 1 / self.sqrt_one_minus_alpha_bar
+        self.recip_sqrt_alpha = 1 / torch.sqrt(self.alpha)
+        self.recip_sqrt_one_minus_alpha_bar = 1 / self.sqrt_one_minus_alpha_bar
 
     def noise_t(self, x, t):
         sqrt_alpha_bar = self.__extract(self.sqrt_alpha_bar[t])
         sqrt_one_minus_alpha_bar = self.__extract(self.sqrt_one_minus_alpha_bar[t])
         noise = torch.randn_like(x, device=self.args.device)
         noise_x = sqrt_alpha_bar * x + sqrt_one_minus_alpha_bar * noise
-        return noise_x, noise
+        return scale_minus1_1(noise_x), noise
     
     def sample_t(self, noise_net, x, t, noise):
         with torch.no_grad():
             noise_pred = noise_net(x, t)
         beta = self.__extract(self.beta[t])
         alpha = self.__extract(self.alpha[t])
-        sqrt_recip_alpha = self.__extract(self.sqrt_recip_alpha[t])
-        sqrt_recip_one_minus_alpha_bar = self.__extract(self.sqrt_recip_one_minus_alpha_bar[t])
-        sample = sqrt_recip_alpha * (x - ((1 - alpha) / sqrt_recip_one_minus_alpha_bar) * noise_pred) + torch.sqrt(beta) * noise
-        return sample.clamp(-1, 1)
+        recip_sqrt_alpha = self.__extract(self.recip_sqrt_alpha[t])
+        recip_sqrt_one_minus_alpha_bar = self.__extract(self.recip_sqrt_one_minus_alpha_bar[t])
+        noise_removed_x = x - (1 - alpha) * recip_sqrt_one_minus_alpha_bar * noise_pred
+        sample = recip_sqrt_alpha * noise_removed_x + torch.sqrt(beta) * noise
+        return scale_minus1_1(sample)
     
     def sample(self, noise_net, shape):
         noise_net.eval()
         images = torch.randn(shape, device=self.args.device)
         images_list = []
 
+        record_ts = torch.linspace(0, self.args.t-1, 10, dtype=torch.uint8)
+
         for t in tqdm(reversed(range(0, self.args.t)), position=0):
-            if t > 0:
-                z = torch.randn(shape, device=self.args.device)
-            else:
-                z = torch.zeros(shape, device=self.args.device)
+            z = torch.randn(shape, device=self.args.device) if t > 0 else torch.zeros(shape, device=self.args.device)
             ts = torch.ones((len(images), 1), dtype=int, device=self.args.device) * t
             images = self.sample_t(noise_net, images, ts, z)
-            if t % (self.args.t // 10) == 0:
-                images_list.append(images.cpu())
+
+            if t in record_ts:
+                images_list.append(scale_0_1(images).cpu())
         noise_net.train()
         return images_list
 
@@ -134,15 +133,16 @@ class DDPM:
         for epoch in tqdm(range(self.args.n)):
             for i, batch in enumerate(self.dataloader, 0):
                 batch, labels = batch
-                batch_t = torch.randint_like(labels, high=self.args.t, device=self.args.device)
                 batch = batch.to(self.args.device)
                 labels = labels.to(self.args.device)
-
+                
+                batch_t = torch.randint_like(labels, high=self.args.t, device=self.args.device)
                 batch_noised_images, batch_noise = self.noise_t(batch, batch_t)
+                
+                # plot_batch(batch, self.progress_dir + f"image-t:{batch_t[0]}")
+                # plot_batch(batch_noised_images, self.progress_dir + f"noisy_image-t:{batch_t[0]}")
+                
                 batch_t = batch_t[:, None]
-
-                if iters == 0:
-                    plot_batch(batch, self.progress_dir + f"train_example")
 
                 noise_net.zero_grad()
                 batch_noise_pred = noise_net(batch_noised_images, batch_t)
@@ -150,23 +150,23 @@ class DDPM:
                 mse_loss.backward()
                 optimizer.step()
 
+                losses.append(mse_loss.item())
+
                 #############################
                 ####   Metrics Tracking  ####
                 #############################
+
+                if iters == 0:
+                    plot_batch(batch, self.progress_dir + f"train_example")
 
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\tloss: %.4f'
                         % (epoch, self.args.n, i, len(self.dataloader), mse_loss.item()))
 
-                losses.append(mse_loss.item())
-
                 if (iters % 1000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
-
                     with torch.no_grad():
-                        noise_net.eval()
                         fake = self.sample(noise_net, batch.shape)[-1]
-                        noise_net.train()
-                    plot_batch(fake, self.progress_dir + f"iter:{iters}")
+                    plot_batch(scale_0_1(fake), self.progress_dir + f"iter:{iters}")
 
                 iters += 1
 
