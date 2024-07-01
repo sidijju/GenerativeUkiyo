@@ -52,7 +52,6 @@ class DDPM:
         self.sqrt_recip_one_minus_alpha_bar = 1 / self.sqrt_one_minus_alpha_bar
 
     def noise_t(self, x, t):
-        print(t)
         sqrt_alpha_bar = self.sqrt_alpha_bar[t]
         sqrt_one_minus_alpha_bar = self.sqrt_one_minus_alpha_bar[t]
         noise = torch.randn_like(x, device=self.args.device)
@@ -138,10 +137,6 @@ class DDPM:
                 batch_t = torch.randint_like(labels, high=self.args.t, device=self.args.device)
                 batch = batch.to(self.args.device)
                 labels = labels.to(self.args.device)
-
-                print(batch.shape)
-                print(batch_t.shape)
-                print(labels.shape)
 
                 batch_noised_images, batch_noise = self.noise_t(batch, batch_t)
                 batch_t = batch_t[:, None]
