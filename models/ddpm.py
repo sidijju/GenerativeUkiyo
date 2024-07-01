@@ -51,15 +51,6 @@ class DDPM:
         self.sqrt_recip_alpha = 1 / self.sqrt_alpha_bar
         self.sqrt_recip_one_minus_alpha_bar = 1 / self.sqrt_one_minus_alpha_bar
 
-        print(self.beta.shape)
-        print(self.alpha.shape)
-        print(self.alpha_bar.shape)
-        print(self.alpha_bar_prev.shape)
-        print(self.sqrt_alpha_bar.shape)
-        print(self.sqrt_one_minus_alpha_bar.shape)
-        print(self.sqrt_recip_alpha.shape)
-        print(self.sqrt_recip_one_minus_alpha_bar.shape)
-
     def noise_t(self, x, t):
         print(t)
         sqrt_alpha_bar = self.sqrt_alpha_bar[t]
@@ -83,8 +74,8 @@ class DDPM:
         images = torch.randn(shape, device=self.args.device)
         images_list = []
 
-        for t in tqdm(reversed(range(1, self.args.t+1)), position=0):
-            if t > 1:
+        for t in tqdm(reversed(range(0, self.args.t)), position=0):
+            if t > 0:
                 z = torch.randn(shape, device=self.args.device)
             else:
                 z = torch.zeros(shape, device=self.args.device)
@@ -144,7 +135,7 @@ class DDPM:
         for epoch in tqdm(range(self.args.n)):
             for i, batch in enumerate(self.dataloader, 0):
                 batch, labels = batch
-                batch_t = torch.randint_like(labels, high=self.args.t+1, device=self.args.device)
+                batch_t = torch.randint_like(labels, high=self.args.t, device=self.args.device)
                 batch = batch.to(self.args.device)
                 labels = labels.to(self.args.device)
 
