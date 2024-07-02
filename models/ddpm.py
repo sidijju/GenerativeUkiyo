@@ -155,7 +155,7 @@ class DenoisingDiffusionModel(nn.Module):
         for t in tqdm(reversed(range(0, self.args.t)), position=0):
             z = torch.randn(shape, device=self.args.device) if t > 0 else torch.zeros(shape, device=self.args.device)
             ts = torch.ones((len(images), 1), dtype=int, device=self.args.device) * t
-            images = self.sample_t(self.noise_net, images, ts, z)
+            images = self.sample_t(images, ts, z)
 
             if t in record_ts:
                 images_list.append(scale_0_1(images).cpu())
@@ -231,8 +231,6 @@ class NoiseNet(nn.Module):
             module.to(self.args.device)
 
     def forward(self, x, t):
-        print(x.shape)
-        print(t.shape)
         t = self.time_embedding(t)
         x = self.input_conv(x)
         residual = x.clone()
@@ -340,10 +338,7 @@ class SinusoidalPosEmb(nn.Module):
         self.theta = theta
 
     def forward(self, t):
-        print(t.shape)
         ks = torch.arange(0, self.dim, 2, device=self.device)
-        print(ks.shape)
         w_k = torch.exp(math.log(self.theta) * -ks / self.dim)
-        print(w_k.shape)
         emb = torch.cat((torch.sin(t * w_k), torch.cos(t * w_k)), dim=-1)
         return emb
