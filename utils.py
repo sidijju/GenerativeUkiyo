@@ -8,6 +8,11 @@ import torchvision.transforms.v2 as v2
 
 to_512 = v2.Resize(512)
 
+def extract(t):
+    for _ in range(4 - len(t.shape)):
+        t = torch.unsqueeze(t, -1)
+    return t
+
 def scale_0_1(image):
     # scale to 0 to 1 image
     image = image - torch.min(image, keepdim=True, dim=0)[0]
