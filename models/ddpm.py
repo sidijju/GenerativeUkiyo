@@ -166,7 +166,7 @@ class DenoisingDiffusionModel(nn.Module):
         x = scale_minus1_1(x)
         x_t, noise = self.noise_t(x, t)
         t = t[:, None]
-        noise_hat = self.noise_net(x_t, noise)
+        noise_hat = self.noise_net(x_t, t)
         return noise_hat, noise
 
 class NoiseNet(nn.Module):
