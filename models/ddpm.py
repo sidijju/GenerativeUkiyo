@@ -342,6 +342,8 @@ class SinusoidalPosEmb(nn.Module):
     def forward(self, t):
         print(t.shape)
         ks = torch.arange(0, self.dim, 2, device=self.device)
+        print(ks.shape)
         w_k = torch.exp(math.log(self.theta) * -ks / self.dim)
+        print(w_k.shape)
         emb = torch.cat((torch.sin(t * w_k), torch.cos(t * w_k)), dim=-1)
         return emb
