@@ -83,12 +83,6 @@ class DDPM:
                 mse_loss.backward()
                 optimizer.step()
 
-                print(torch.max(batch_noise_hat))
-                print(torch.min(batch_noise_hat))
-
-                print(torch.max(batch_noise))
-                print(torch.min(batch_noise))
-
                 losses.append(mse_loss.item())
 
                 #############################
@@ -101,8 +95,6 @@ class DDPM:
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\tloss: %.4f'
                         % (epoch, self.args.n, i, len(self.dataloader), mse_loss.item()))
-                    
-                exit(-1)
 
                 if (iters % 1000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
                     with torch.no_grad():
@@ -171,18 +163,8 @@ class DenoisingDiffusionModel(nn.Module):
     
     def forward(self, x):
         t = torch.randint(self.args.t, (x.shape[0], ), device=self.args.device)
-        print(torch.max(x))
-        print(torch.min(x))
         x = scale_minus1_1(x)
-        print(torch.max(x))
-        print(torch.min(x))
-        print("scaled x ^")
         x_t, noise = self.noise_t(x, t)
-        print(torch.max(noise))
-        print(torch.min(noise))
-
-        print(torch.max(x_t))
-        print(torch.min(x_t))
         t = t[:, None]
         noise_hat = self.noise_net(x_t, t)
         return noise_hat, noise
