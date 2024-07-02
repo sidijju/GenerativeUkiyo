@@ -114,12 +114,12 @@ class DenoisingDiffusionModel(nn.Module):
         self.noise_net = NoiseNet(self.args)
 
         beta = torch.linspace(self.args.b_0, self.args.b_t, self.args.t, device=self.args.device)
-        alpha = 1 - self.beta
-        alpha_bar = torch.cumprod(self.alpha, dim=0).to(self.args.device)
-        sqrt_alpha_bar = torch.sqrt(self.alpha_bar)
-        sqrt_one_minus_alpha_bar = torch.sqrt(1 - self.alpha_bar)
-        recip_sqrt_alpha = 1 / torch.sqrt(self.alpha)
-        recip_sqrt_one_minus_alpha_bar = 1 / self.sqrt_one_minus_alpha_bar
+        alpha = 1 - beta
+        alpha_bar = torch.cumprod(alpha, dim=0).to(self.args.device)
+        sqrt_alpha_bar = torch.sqrt(alpha_bar)
+        sqrt_one_minus_alpha_bar = torch.sqrt(1 - alpha_bar)
+        recip_sqrt_alpha = 1 / torch.sqrt(alpha)
+        recip_sqrt_one_minus_alpha_bar = 1 / sqrt_one_minus_alpha_bar
 
         self.register_buffer("beta", beta.to(torch.float32))
         self.register_buffer("alpha", alpha.to(torch.float32))
