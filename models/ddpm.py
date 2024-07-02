@@ -171,9 +171,12 @@ class DenoisingDiffusionModel(nn.Module):
     
     def forward(self, x):
         t = torch.randint(self.args.t, (x.shape[0], ), device=self.args.device)
+        print(torch.max(x))
+        print(torch.min(x))
         x = scale_minus1_1(x)
         print(torch.max(x))
         print(torch.min(x))
+        print("scaled x ^")
         x_t, noise = self.noise_t(x, t)
         print(torch.max(noise))
         print(torch.min(noise))
