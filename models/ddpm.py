@@ -83,6 +83,12 @@ class DDPM:
                 mse_loss.backward()
                 optimizer.step()
 
+                print(torch.max(batch_noise_hat))
+                print(torch.min(batch_noise_hat))
+
+                print(torch.max(batch_noise))
+                print(torch.min(batch_noise))
+
                 losses.append(mse_loss.item())
 
                 #############################
@@ -95,6 +101,8 @@ class DDPM:
                 if i % 100 == 0:
                     print(f'[%d/%d][%d/%d]\tloss: %.4f'
                         % (epoch, self.args.n, i, len(self.dataloader), mse_loss.item()))
+                    
+                exit(-1)
 
                 if (iters % 1000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
                     with torch.no_grad():
@@ -133,8 +141,8 @@ class DenoisingDiffusionModel(nn.Module):
         sqrt_alpha_bar = extract(self.sqrt_alpha_bar[t])
         sqrt_one_minus_alpha_bar = extract(self.sqrt_one_minus_alpha_bar[t])
         noise = torch.randn_like(x0, device=self.args.device)
-        noise_x = sqrt_alpha_bar * x0 + sqrt_one_minus_alpha_bar * noise
-        return noise_x, noise
+        xt = sqrt_alpha_bar * x0 + sqrt_one_minus_alpha_bar * noise
+        return xt, noise
     
     @torch.inference_mode()
     def sample_t(self, x, t, noise):
