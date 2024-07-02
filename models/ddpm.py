@@ -162,6 +162,8 @@ class DenoisingDiffusionModel(nn.Module):
         return images_list
     
     def forward(self, x):
+        print(x.shape[0])
+        print((x.shape[0]))
         t = torch.randint(self.args.t, (x.shape[0]), device=self.args.device)
         x = scale_minus1_1(x)
         x_t, noise = self.noise_t(x, t)
