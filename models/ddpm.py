@@ -162,8 +162,6 @@ class DenoisingDiffusionModel(nn.Module):
         return images_list
     
     def forward(self, x):
-        print(x.shape[0])
-        print((x.shape[0], ))
         t = torch.randint(self.args.t, (x.shape[0], ), device=self.args.device)
         x = scale_minus1_1(x)
         x_t, noise = self.noise_t(x, t)
@@ -233,6 +231,8 @@ class NoiseNet(nn.Module):
             module.to(self.args.device)
 
     def forward(self, x, t):
+        print(x.shape)
+        print(t.shape)
         t = self.time_embedding(t)
         x = self.input_conv(x)
         residual = x.clone()
