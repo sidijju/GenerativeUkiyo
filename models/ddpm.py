@@ -1,12 +1,12 @@
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
-from datetime import datetime
 from utils import *
 from einops import rearrange
 from einops.layers.torch import Rearrange
 import math
 from tqdm import tqdm
+from ema_pytorch import EMA
 
 class DDPM:
     def __init__(self,
@@ -24,10 +24,10 @@ class DDPM:
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
 
-    def save_train_data(self, losses, ddpm):
+    def save_train_data(self, losses, ema):
 
         # save models
-        torch.save(ddpm.state_dict(), self.run_dir + '/ddpm.pt')
+        torch.save(ema.ema_model.state_dict(), self.run_dir + '/ddpm.pt')
 
         # save losses
         plt.cla()
@@ -45,7 +45,7 @@ class DDPM:
         shape = (n, self.channel_size, self.args.dim, self.args.dim)
 
         ddpm = DenoisingDiffusionModel(self.args)
-        ddpm.load_state_dict(torch.load(path + "/noise_net.pt"))
+        ddpm.load_state_dict(torch.load(path + "/ddpm.pt"))
         ddpm.to(self.args.device)
         ddpm.eval()
 
@@ -65,6 +65,11 @@ class DDPM:
     def train(self):
         ddpm = DenoisingDiffusionModel(self.args)
         ddpm.to(self.args.device)
+        ema = EMA(ddpm, 
+                  beta = 0.9999, 
+                  update_after_step = 100, 
+                  update_every = 10,
+                  include_online_model=False)
         optimizer = optim.Adam(ddpm.parameters(), lr=self.args.lr)
         mse = nn.MSELoss()
 
@@ -82,6 +87,7 @@ class DDPM:
                 mse_loss = mse(batch_noise_hat, batch_noise)
                 mse_loss.backward()
                 optimizer.step()
+                ema.update()
 
                 losses.append(mse_loss.item())
 
@@ -97,14 +103,15 @@ class DDPM:
                         % (epoch, self.args.n, i, len(self.dataloader), mse_loss.item()))
 
                 if (iters % 1000 == 0) or ((epoch == self.args.n-1) and (i == len(self.dataloader)-1)):
-                    with torch.no_grad():
-                        fake = ddpm.sample(batch.shape)[-1]
+                    ema.eval()
+                    fake = ema.ema_model.sample(batch.shape)[-1]
+                    ema.train()
                     plot_batch(scale_0_1(fake), self.progress_dir + f"iter:{iters}")
 
                 iters += 1
 
         print("### End Training Procedure ###")
-        self.save_train_data(losses, ddpm)
+        self.save_train_data(losses, ema)
 
 class DenoisingDiffusionModel(nn.Module):
     def __init__(self, args):
