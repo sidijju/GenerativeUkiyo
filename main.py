@@ -23,7 +23,9 @@ parser.add_argument('-n', '--n', type=int, default=5, help='number of training e
 parser.add_argument('--seed', type=int, default=128, help='manual random seed')
 parser.add_argument('--batchsize', type=int, default=32, help='batch size')
 parser.add_argument('--latent', type=int, default=512, help='size of latent dimension')
+parser.add_argument('--dim', type=int, default=128, help='image dimension for input and output')
 parser.add_argument('--lr', type=float, default=1e-6, help='learning rate for training')
+parser.add_argument('--decay', type=float, default=0.9999, help='weight decay for EMA')
 parser.add_argument('--log_dir', type=str, default=None, help='log dir for training')
 
 ### Model Flags
@@ -74,10 +76,6 @@ else:
 
 ##### Dataset #####
 
-# hardcode to 128 by 128 images for now
-# TODO make this a parameter
-args.dim = 128
-
 if args.augment:
     make_dir(args.augment)
 
@@ -86,21 +84,21 @@ if args.augment:
     print("### Augmenting Dataset ###")
     counter = 0
     new_counter = 0
-    for f in glob.glob("jap-art/*/*.jpg"):
+    for f in glob.glob("data/jap-art/*/*.jpg"):
         counter += 1
         img = to_float32(read_image(f).to(args.device))
         dir_name = f.split('/')[-2]
         img_name = f.split('/')[-1][:-4]
-        store_location = args.augment + dir_name + "/" + img_name
-        if not os.path.exists(args.augment + dir_name):
-            os.makedirs(args.augment + dir_name)
+        new_dir_name = args.augment + "/" + dir_name
+        store_location = new_dir_name + "/" + img_name
+        make_dir(new_dir_name)
         save_image(img, store_location + ".jpg")
 
         augment_transforms = [
             v2.RandomHorizontalFlip(p=1.0),
-            v2.RandomRotation(30, fill=1),
             v2.RandomResizedCrop(720),
-            v2.RandomPerspective(distortion_scale = 0.25, p=1.0, fill=1.0),
+            # v2.RandomRotation(30, fill=1),
+            # v2.RandomPerspective(distortion_scale = 0.25, p=1.0, fill=1.0),
         ]
 
         for i, transform in enumerate(augment_transforms):
