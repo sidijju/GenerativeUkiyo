@@ -96,7 +96,7 @@ if args.augment:
 
         augment_transforms = [
             v2.RandomHorizontalFlip(p=1.0),
-            v2.RandomResizedCrop(720),
+            # v2.RandomResizedCrop(720),
             # v2.RandomRotation(30, fill=1),
             # v2.RandomPerspective(distortion_scale = 0.25, p=1.0, fill=1.0),
         ]

@@ -53,7 +53,6 @@ class DDPM:
         batch = batch.to(self.args.device)
         fake_progress = ddpm.sample(shape)
         make_dir(path + "/f_progress")
-
         for i in range(n):
             plot_image(batch[i], path + f"/r_{i}")
             for t in range(len(fake_progress)):
