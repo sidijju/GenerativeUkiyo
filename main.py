@@ -84,7 +84,7 @@ if args.augment:
     print("### Augmenting Dataset ###")
     counter = 0
     new_counter = 0
-    for f in glob.glob("data/jap-art/*.jpg"):
+    for f in glob.glob("data/jap-art/*/*.jpg"):
         counter += 1
         img = to_float32(read_image(f).to(args.device))
         dir_name = f.split('/')[-2]
