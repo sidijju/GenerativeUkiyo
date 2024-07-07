@@ -117,6 +117,9 @@ elif args.ff:
 else:
     dataset = JapArtDataset(args)
 
+print("#########################")
+print(f"Dataset Size: {len(dataset)}")
+
 # assuming channels first dataset
 args.channel_size = len(dataset[0][0])
 args.num_classes = len(dataset.labels_map)
