@@ -207,31 +207,32 @@ class NoiseNet(nn.Module):
             is_last = (i == (num_resolutions - 1))
             self.downs.append(
                 nn.ModuleList([
-                    ConvNextBlock(dim_in, dim_in, time_dim),
-                    ConvNextBlock(dim_in, dim_in, time_dim),
+                    ResnetBlock(dim_in, dim_in, time_dim),
+                    ResnetBlock(dim_in, dim_in, time_dim),
                     SelfAttention(dim_in) if res in attn_resolutions else nn.Identity(),
                     Downsample(dim_in, dim_out) if not is_last else nn.Conv2d(dim_in, dim_out, 3, padding=1)
                     ]
                 )
             )
 
-        self.mid_conv_1 = ConvNextBlock(dims[-1], dims[-1], time_dim)
-        self.mid_attn = SelfAttention(dims[-1])
-        self.mid_conv_2 = ConvNextBlock(dims[-1], dims[-1], time_dim)
+        mid_dim = dims[-1]
+        self.mid_conv_1 = ResnetBlock(mid_dim, mid_dim, time_dim)
+        self.mid_attn = SelfAttention(mid_dim)
+        self.mid_conv_2 = ResnetBlock(mid_dim, mid_dim, time_dim)
 
         for i, (dim_in, dim_out, res) in reversed((in_out_res)):
             is_first = (i == 0)
             self.ups.append(
                 nn.ModuleList([
-                    ConvNextBlock(dim_out + dim_in, dim_out, time_dim),
-                    ConvNextBlock(dim_out + dim_in, dim_out, time_dim),
+                    ResnetBlock(dim_out + dim_in, dim_out, time_dim),
+                    ResnetBlock(dim_out + dim_in, dim_out, time_dim),
                     SelfAttention(dim_out) if res in attn_resolutions else nn.Identity(),
                     Upsample(dim_out, dim_in) if not is_first else nn.Conv2d(dim_out, dim_in, 3, padding=1)
                     ]
                 )
             )
 
-        self.output_res = ConvNextBlock(init_dim * 2, init_dim, time_dim)
+        self.output_res = ResnetBlock(init_dim * 2, init_dim, time_dim)
         self.output_conv = nn.Conv2d(init_dim, self.args.channel_size, 1)
 
         for module in self.downs:
@@ -269,25 +270,35 @@ class NoiseNet(nn.Module):
         x = self.output_res(x, t)
         x = self.output_conv(x)
         return x
+    
+class SelfAttention(nn.Module):
+    def __init__(self, dim, heads=4, dim_head=32):
+        super().__init__()
+        self.scale = dim_head ** -0.5
+        self.heads = heads
+        hidden_dim = dim_head * heads
+        self.norm = nn.GroupNorm(1, dim)
+        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1)
+        self.to_out = nn.Conv2d(hidden_dim, dim, 1)
 
-class ConvNextBlock(nn.Module):
+    def forward(self, x):
+        x = self.norm(x)
+        qkv = self.to_qkv(x).chunk(3, dim = 1)
+        q, k, v = map(lambda t: rearrange(t, 'b (h c) x y -> b h (x y) c', h = self.heads), qkv)
+        attn = F.scaled_dot_product_attention(q, k, v, scale=self.scale)
+        return self.to_out(attn)
+
+class ResnetBlock(nn.Module):
     def __init__(self, in_channels, out_channels, time_embedding_dim):
         super().__init__()
 
         self.time_input = nn.Sequential(
-            nn.GELU(),
+            nn.SiLU(),
             nn.Linear(time_embedding_dim, in_channels)
         )
 
-        self.input_conv = nn.Conv2d(in_channels, in_channels, 7, padding=3, groups=in_channels)
-
-        self.conv_block = nn.Sequential(
-            nn.GroupNorm(1, in_channels),
-            nn.Conv2d(in_channels, out_channels * 2, 3, padding=1),
-            nn.GELU(),
-            nn.GroupNorm(1, out_channels * 2),
-            nn.Conv2d(out_channels * 2, out_channels, 3, padding=1)
-        )
+        self.block1 = ConvBlock(in_channels, out_channels) 
+        self.block2 = ConvBlock(out_channels, out_channels) 
 
         self.residual_connection = (
             nn.Conv2d(in_channels, out_channels, 1)
@@ -295,23 +306,23 @@ class ConvNextBlock(nn.Module):
         )
 
     def forward(self, x, t):
-        h = self.input_conv(x)
-        h += self.time_input(t)[:, :, None, None]
-        h = self.conv_block(h)
-        h += self.residual_connection(x)
-        return h
+        time_emb = self.time_input(t)[:, :, None, None]
+        h = self.block1(x + time_emb)
+        h = self.block2(h)
+        return h + self.residual_connection(x)
     
-class SelfAttention(nn.Module):
-    def __init__(self, dim):
+class ConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, groups=4):
         super().__init__()
-        self.scale = dim ** -0.5
-        self.norm = nn.GroupNorm(1, dim)
-        self.to_qkv = nn.Conv2d(dim, dim * 3, 1)
+
+        self.model = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, padding=1),
+            nn.GroupNorm(groups, out_channels),
+            nn.SiLU(),
+        )
 
     def forward(self, x):
-        x = self.norm(x)
-        q, k, v = rearrange(self.to_qkv(x), 'b (c qkv) h w -> qkv b c h w', qkv=3)
-        return F.scaled_dot_product_attention(q, k, v, scale=self.scale)
+        return self.model(x)
 
 class Downsample(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -349,5 +360,6 @@ class SinusoidalPosEmb(nn.Module):
     def forward(self, t):
         ks = torch.arange(0, self.dim, 2, device=self.device)
         w_k = torch.exp(math.log(self.theta) * -ks / self.dim)
-        emb = torch.cat((torch.sin(t * w_k), torch.cos(t * w_k)), dim=-1)
+        t_w_k = t * w_k
+        emb = torch.cat((torch.sin(t_w_k), torch.cos(t_w_k)), dim=-1)
         return emb
