@@ -294,7 +294,7 @@ class ConvNextBlock(nn.Module):
     def forward(self, x, t):
         h = self.input_conv(x)
         h += self.time_input(t)[:, :, None, None]
-        h = self.conv_block(x)
+        h = self.conv_block(h)
         h += self.residual_connection(x)
         return h
     
