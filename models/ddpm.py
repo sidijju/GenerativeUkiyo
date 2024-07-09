@@ -145,17 +145,16 @@ class DenoisingDiffusionModel(nn.Module):
         xt = sqrt_alpha_bar * x0 + sqrt_one_minus_alpha_bar * noise
         return xt, noise
     
-    @torch.inference_mode()
+    @torch.no_grad()
     def sample_t(self, x, t, noise):
         noise_pred = self.noise_net(x, t)
         beta = extract(self.beta[t])
-        alpha = extract(self.alpha[t])
         recip_sqrt_alpha = extract(self.recip_sqrt_alpha[t])
         recip_sqrt_one_minus_alpha_bar = extract(self.recip_sqrt_one_minus_alpha_bar[t])
-        noise_removed_x = x - (1 - alpha) * recip_sqrt_one_minus_alpha_bar * noise_pred
-        return recip_sqrt_alpha * noise_removed_x + torch.sqrt(beta) * noise
+        model_mean = recip_sqrt_alpha * (x - beta * recip_sqrt_one_minus_alpha_bar * noise_pred)
+        return model_mean + torch.sqrt(beta) * noise
     
-    @torch.inference_mode()
+    @torch.no_grad()
     def sample(self, shape):
         images = torch.randn(shape, device=self.device)
         images_list = []
