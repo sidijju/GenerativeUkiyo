@@ -277,7 +277,7 @@ class SelfAttention(nn.Module):
         self.heads = heads
         hidden_dim = dim_head * heads
         self.norm = nn.GroupNorm(1, dim)
-        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1)
+        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias=False)
         self.to_out = nn.Conv2d(hidden_dim, dim, 1)
 
     def forward(self, x):
@@ -293,7 +293,7 @@ class SelfAttention(nn.Module):
         context = torch.einsum("b h d n, b h e n -> b h d e", k, v)
 
         out = torch.einsum("b h d e, b h d n -> b h e n", context, q)
-        out = rearrange(out, "b h c (x y) -> b (h c) x y", h=self.heads, x=h, y=w)
+        out = rearrange(out, "b h (x y) c -> b (h c) x y", h=self.heads, x=h, y=w)
         return self.to_out(out)
 
 class ResnetBlock(nn.Module):
