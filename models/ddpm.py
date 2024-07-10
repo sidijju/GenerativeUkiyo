@@ -147,8 +147,9 @@ class DenoisingDiffusionModel(nn.Module):
     
     @torch.no_grad()
     def sample_t(self, x, t):
+        ts = torch.ones((len(x), 1), dtype=int, device=self.device) * t
         noise = torch.zeros_like(x, device=self.device) if t == 0 else torch.randn_like(x, device=self.device)
-        noise_pred = self.noise_net(x, t)
+        noise_pred = self.noise_net(x, ts)
         beta = extract(self.beta[t])
         recip_sqrt_alpha = extract(self.recip_sqrt_alpha[t])
         recip_sqrt_one_minus_alpha_bar = extract(self.recip_sqrt_one_minus_alpha_bar[t])
@@ -162,8 +163,7 @@ class DenoisingDiffusionModel(nn.Module):
         record_ts = torch.linspace(0, self.t-1, 10, dtype=torch.uint8)
 
         for t in tqdm(reversed(range(0, self.t)), position=0):
-            ts = torch.ones((len(images), 1), dtype=int, device=self.device) * t
-            images = self.sample_t(images, ts)
+            images = self.sample_t(images, t)
 
             if t in record_ts:
                 images_list.append(scale_0_1(images).cpu())
