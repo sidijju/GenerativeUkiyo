@@ -146,7 +146,8 @@ class DenoisingDiffusionModel(nn.Module):
         return xt, noise
     
     @torch.no_grad()
-    def sample_t(self, x, t, noise):
+    def sample_t(self, x, t):
+        noise = torch.zeros_like(x, device=self.device) if t == 0 else torch.randn_like(x, device=self.device)
         noise_pred = self.noise_net(x, t)
         beta = extract(self.beta[t])
         recip_sqrt_alpha = extract(self.recip_sqrt_alpha[t])
@@ -161,9 +162,8 @@ class DenoisingDiffusionModel(nn.Module):
         record_ts = torch.linspace(0, self.t-1, 10, dtype=torch.uint8)
 
         for t in tqdm(reversed(range(0, self.t)), position=0):
-            z = torch.randn(shape, device=self.device) if t > 0 else torch.zeros(shape, device=self.device)
             ts = torch.ones((len(images), 1), dtype=int, device=self.device) * t
-            images = self.sample_t(images, ts, z)
+            images = self.sample_t(images, ts)
 
             if t in record_ts:
                 images_list.append(scale_0_1(images).cpu())
@@ -241,9 +241,8 @@ class NoiseNet(nn.Module):
     def forward(self, x, t):
         t = self.time_embedding(t)
         x = self.input_conv(x)
-        residual = x.clone()
+        res_stack = [x.clone()]
 
-        res_stack = []
         for down1, down2, attn, downsample in self.downs:
             x = down1(x, t)
             res_stack.append(x)
@@ -264,7 +263,7 @@ class NoiseNet(nn.Module):
             x = attn(x)
             x = upsample(x)
 
-        x = torch.cat((x, residual), dim=1)
+        x = torch.cat((x, res_stack.pop()), dim=1)
         x = self.output_res(x, t)
         return self.output_conv(x)
     
