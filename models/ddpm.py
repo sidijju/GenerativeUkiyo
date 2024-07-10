@@ -163,7 +163,7 @@ class DenoisingDiffusionModel(nn.Module):
         for t in tqdm(reversed(range(0, self.t)), position=0):
             z = torch.randn(shape, device=self.device) if t > 0 else torch.zeros(shape, device=self.device)
             ts = torch.ones((len(images), 1), dtype=int, device=self.device) * t
-            images = self.sample_t(scale_minus1_1(images), ts, z)
+            images = self.sample_t(images, ts, z)
 
             if t in record_ts:
                 images_list.append(scale_0_1(images).cpu())
