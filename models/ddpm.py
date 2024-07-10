@@ -163,7 +163,7 @@ class DenoisingDiffusionModel(nn.Module):
         for t in tqdm(reversed(range(0, self.t)), position=0):
             z = torch.randn(shape, device=self.device) if t > 0 else torch.zeros(shape, device=self.device)
             ts = torch.ones((len(images), 1), dtype=int, device=self.device) * t
-            images = self.sample_t(images, ts, z)
+            images = self.sample_t(scale_minus1_1(images), ts, z)
 
             if t in record_ts:
                 images_list.append(scale_0_1(images).cpu())
@@ -171,8 +171,7 @@ class DenoisingDiffusionModel(nn.Module):
     
     def forward(self, x):
         t = torch.randint(self.t, (x.shape[0], ), device=self.device)
-        x = scale_minus1_1(x)
-        x_t, noise = self.noise_t(x, t)
+        x_t, noise = self.noise_t(scale_minus1_1(x), t)
         t = t[:, None]
         noise_hat = self.noise_net(x_t, t)
         return noise_hat, noise
@@ -267,8 +266,7 @@ class NoiseNet(nn.Module):
 
         x = torch.cat((x, residual), dim=1)
         x = self.output_res(x, t)
-        x = self.output_conv(x)
-        return x
+        return self.output_conv(x)
     
 class SelfAttention(nn.Module):
     def __init__(self, dim, heads=4, dim_head=32):
