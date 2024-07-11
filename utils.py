@@ -34,7 +34,7 @@ def plot_image(image, path):
 
 def plot_batch(batch, path):
     plt.cla()
-    grid = vutils.make_grid(batch.cpu()[:25], nrow = 5, padding=2, normalize=True)
+    grid = vutils.make_grid(batch.cpu()[:16], nrow = 4, padding=2, normalize=True)
     plt.axis('off')
     plt.imshow(grid.permute(1, 2, 0))
     plt.savefig(path, bbox_inches=0)
