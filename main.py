@@ -59,6 +59,7 @@ parser.add_argument('--annealing', default=False, action='store_true', help='fla
 parser.add_argument('--t', type=int, default=1000, help='noise timesteps for ddpm')
 parser.add_argument('--b_0', type=float, default=1e-4, help='beta at timestep 0 for ddpm')
 parser.add_argument('--b_t', type=float, default=0.02, help='beta at timestep t for ddpm')
+parser.add_argument('--fixed_large', default=False, action='store_true', help='used fixed large for posterior variance')
 
 args = parser.parse_args()
 
