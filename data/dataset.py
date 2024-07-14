@@ -32,7 +32,6 @@ class JapArtDataset(Dataset):
         self.transform = transform if transform else v2.Compose([
             v2.ToDtype(torch.float32, scale=True),
             v2.Resize(self.dim),
-            v2.Lambda(lambda x: torch.clamp(x, 0, 1)),
         ])
 
     def __len__(self):
