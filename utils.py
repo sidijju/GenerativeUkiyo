@@ -14,12 +14,14 @@ def extract(t):
     return t
 
 def scale_0_1(image):
-    # scale -1 to 1 to 0 to 1
-    return torch.clamp((image + 1) * 0.5, min=0, max=1)
+    # scale anything to 0 to 1
+    image_min = torch.min(torch.min(image, dim=-1), dim=-1)
+    image_max = torch.max(torch.max(image, dim=-1), dim=-1)
+    return (image - image_min) / (image_max - image_min)
 
 def scale_minus1_1(image):
     # scale 0 to 1 to -1 to 1
-    return torch.clamp(image * 2 - 1, min=-1, max=1)
+    return image * 2 - 1
 
 def make_dir(path):
     if not os.path.exists(path):
