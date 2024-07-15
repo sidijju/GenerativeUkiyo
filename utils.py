@@ -15,8 +15,8 @@ def extract(t):
 
 def scale_0_1(image):
     # scale anything to 0 to 1
-    image_min = torch.min(torch.min(image, dim=-1)[0], dim=-1)[0]
-    image_max = torch.max(torch.max(image, dim=-1)[0], dim=-1)[0]
+    image_min = torch.min(image[:, :, :, torch.min(image, dim=3)[1]], dim=2)[0]
+    image_max = torch.max(image[:, :, :, torch.max(image, dim=3)[1]], dim=2)[0]
     return (image - image_min) / (image_max - image_min)
 
 def scale_minus1_1(image):
