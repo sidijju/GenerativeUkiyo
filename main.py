@@ -82,8 +82,6 @@ if args.ff:
     dataset = FlickerFacesDataset(args)
 else:
     dataset = JapArtDataset(args)
-
-print("#########################")
 print(f"Dataset Size: {len(dataset)}")
 
 # assuming channels first dataset
