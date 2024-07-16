@@ -49,7 +49,7 @@ and specify the directory with pretrained weights
 
 '--ff' - 'use Flicker Faces 128 x 128 dataset (assuming its already downloaded)'
 
-`--augment` - run auto-augmentation on input dataset and store in input directory
+`--augment` - augment data on-the-fly with random tranforms
 
 ### Test Flags
 
