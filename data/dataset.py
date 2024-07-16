@@ -7,7 +7,7 @@ from torchvision.io import read_image
 class JapArtDataset(Dataset):
 
     def __init__(self, args, transform=None):
-        self.img_dir = args.augment if args.augment else 'data/jap-art/'
+        self.img_dir = 'data/jap-art/'
         self.dim = args.dim
 
         self.img_names = []
@@ -29,10 +29,19 @@ class JapArtDataset(Dataset):
             self.img_names.append(f)
             self.labels.append(label)
 
-        self.transform = transform if transform else v2.Compose([
-            v2.ToDtype(torch.float32, scale=True),
-            v2.Resize(self.dim),
-        ])
+        if transform:
+            self.transform = transform
+        else:
+            transforms = [
+                v2.ToDtype(torch.float32, scale=True),
+                v2.Resize(self.dim),
+            ]
+            if args.augment:
+                transforms += [
+                    v2.RandomHorizontalFlip()
+                ]
+                
+            self.transform =  v2.Compose(transforms)
 
     def __len__(self):
         return len(self.img_names)
@@ -52,7 +61,7 @@ class JapArtDataset(Dataset):
 class FlickerFacesDataset(Dataset):
 
     def __init__(self, args, transform=None):
-        self.img_dir = args.augment if args.augment else 'data/ff/real_faces_128'
+        self.img_dir = 'data/ff/real_faces_128'
         self.dim = args.dim
         self.transform = transform
 

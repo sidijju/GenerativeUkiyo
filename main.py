@@ -40,7 +40,7 @@ parser.add_argument('--checkpoint_d', type=str, default=None, help='train discri
 ### Dataset Flags
 
 parser.add_argument('--ff', action='store_true', help='use Flicker Faces 128 x 128 dataset (assuming its already downloaded)')
-parser.add_argument('--augment', type=str, default=None, help='augment dataset to input directory')
+parser.add_argument('--augment', default=False, action='store_true', help='augment dataset')
 
 ## Test Flags
 
@@ -78,43 +78,7 @@ else:
 
 ##### Dataset #####
 
-if args.augment:
-    if not os.path.exists(args.augment):
-        os.makedirs(args.augment)
-
-        to_float32 = v2.ToDtype(dtype=torch.float32, scale=True)
-
-        print("### Augmenting Dataset ###")
-        counter = 0
-        new_counter = 0
-        for f in glob.glob("data/jap-art/*/*.jpg"):
-            counter += 1
-            img = to_float32(read_image(f).to(args.device))
-            dir_name = f.split('/')[-2]
-            img_name = f.split('/')[-1][:-4]
-            new_dir_name = args.augment + "/" + dir_name
-            store_location = new_dir_name + "/" + img_name
-            make_dir(new_dir_name)
-            save_image(img, store_location + ".jpg")
-
-            augment_transforms = [
-                v2.RandomHorizontalFlip(p=1.0),
-                # v2.RandomResizedCrop(720),
-                # v2.RandomRotation(30, fill=1),
-                # v2.RandomPerspective(distortion_scale = 0.25, p=1.0, fill=1.0),
-            ]
-
-            for i, transform in enumerate(augment_transforms):
-                new_counter += 1
-                aug_img = transform(img)
-                save_image(aug_img, store_location + f"_aug{i}.jpg")
-
-        print(f"Original Dataset Size: {counter}")
-        print(f"Augmented Dataset Size: {counter + new_counter}")
-        print("#########################")
-
-    dataset = JapArtDataset(args)
-elif args.ff:
+if args.ff:
     dataset = FlickerFacesDataset(args)
 else:
     dataset = JapArtDataset(args)
