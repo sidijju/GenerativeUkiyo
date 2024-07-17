@@ -15,7 +15,7 @@ def extract(t):
 
 def scale_0_1(image):
     # scale any Tensor to 0 to 1
-    return v2.ToDtype(torch.float32, scale=True)(v2.ToDtype(torch.float64)(image))
+    return v2.ToDtype(torch.float32, scale=True)(v2.ToDtype(torch.float64, scale=True)(image))
 
 def scale_minus1_1(image):
     # scale 0 to 1 to -1 to 1
