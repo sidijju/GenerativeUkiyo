@@ -45,6 +45,7 @@ parser.add_argument('--augment', default=False, action='store_true', help='augme
 ## Test Flags
 
 parser.add_argument('--test', type=str, default=None, help='test model with weights from input path')
+parser.add_argument('--test_n', type=int, default=16, help='number of images to generate')
 
 ### Additional Flags
 
@@ -98,7 +99,7 @@ else:
     model = DCGAN(args, dataloader)
 
 if args.test:
-    model.generate(args.test)
+    model.generate(args.test, n=args.test_n)
 else:
     model.train()
     model.generate(model.run_dir)
