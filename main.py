@@ -66,6 +66,19 @@ parser.add_argument('--cosine_lr', default=False, action='store_true', help='use
 
 args = parser.parse_args()
 
+##### Configs #####
+
+if args.ddpm:
+    args = read_conf('models/configs/ddpm.conf', parser)
+elif args.vae:
+    args = read_conf('models/configs/vae.conf', parser)
+elif args.vq_vae:
+    args = read_conf('models/configs/vq_vae.conf', parser)
+else:
+    args = read_conf('models/configs/dc_gan.conf', parser)
+
+##### Setup #####
+
 if not args.test:
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -77,21 +90,6 @@ if torch.cuda.is_available():
 else: 
     print("Using cpu")
     args.device = torch.device("cpu")
-
-##### Model #####
-
-if args.ddpm:
-    args = read_conf('models/configs/ddpm.conf', parser)
-    model_partial = partial(DDPM, args)
-elif args.vae:
-    args = read_conf('models/configs/vae.conf', parser)
-    model_partial = partial(VAE, args)
-elif args.vq_vae:
-    args = read_conf('models/configs/vq_vae.conf', parser)
-    model_partial = partial(VQVAE, args)
-else:
-    args = read_conf('models/configs/dc_gan.conf', parser)
-    model_partial = partial(DCGAN, args)
 
 ##### Dataset #####
 
@@ -108,7 +106,15 @@ args.num_classes = len(dataset.labels_map)
 ###################
 
 dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
-model = model_partial(dataloader)
+
+if args.ddpm:
+    model = DDPM(args, dataloader)
+elif args.vae:
+    model = VAE(args, dataloader)
+elif args.vq_vae:
+    model = VQVAE(args, dataloader)
+else:
+    model = DCGAN(args, dataloader)
 
 if args.test:
     model.generate(args.test, n=args.test_n)
