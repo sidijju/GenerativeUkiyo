@@ -1,6 +1,7 @@
 import torch
 import random
 import argparse
+from functools import partial
 from torch.utils.data import DataLoader
 
 from models.dc_gan import DCGAN
@@ -8,6 +9,7 @@ from models.vae import VAE
 from models.vq_vae import VQVAE
 from models.ddpm import DDPM
 from data.dataset import *
+from utils import read_conf
 
 parser = argparse.ArgumentParser()
 
@@ -76,6 +78,21 @@ else:
     print("Using cpu")
     args.device = torch.device("cpu")
 
+##### Model #####
+
+if args.ddpm:
+    args = read_conf('models/configs/ddpm.conf', parser)
+    model_partial = partial(DDPM, args)
+elif args.vae:
+    args = read_conf('models/configs/vae.conf', parser)
+    model_partial = partial(VAE, args)
+elif args.vq_vae:
+    args = read_conf('models/configs/vq_vae.conf', parser)
+    model_partial = partial(VQVAE, args)
+else:
+    args = read_conf('models/configs/dc_gan.conf', parser)
+    model_partial = partial(DCGAN, args)
+
 ##### Dataset #####
 
 if args.ff:
@@ -88,16 +105,10 @@ print(f"Dataset Size: {len(dataset)}")
 args.channel_size = len(dataset[0][0])
 args.num_classes = len(dataset.labels_map)
 
-dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
+###################
 
-if args.ddpm:
-    model = DDPM(args, dataloader)
-elif args.vae:
-    model = VAE(args, dataloader)
-elif args.vq_vae:
-    model = VQVAE(args, dataloader)
-else:
-    model = DCGAN(args, dataloader)
+dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
+model = model_partial(dataloader)
 
 if args.test:
     model.generate(args.test, n=args.test_n)

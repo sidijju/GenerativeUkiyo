@@ -1,4 +1,6 @@
 import os
+import json
+import configparser
 import torch
 import torch.nn as nn
 import numpy as np
@@ -70,3 +72,11 @@ def weights_init(model):
     elif classname.find('ConvTranspose2d') != -1:
         nn.init.normal_(model.weight.data, 0.0, 0.02)
         nn.init.constant_(model.bias.data, 0)
+
+def read_conf(conf, parser):
+    config = configparser.ConfigParser()
+    config.read([conf])
+    defaults = dict(config.items("DEFAULT"))
+    parser.set_defaults(**defaults)
+    args = parser.parse_args()
+    return args
