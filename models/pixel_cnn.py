@@ -19,7 +19,7 @@ class GatedMaskedConv2d(nn.Module):
 
         self.h_stack = nn.Conv2d(dim, dim * 2, h_kernel_shape, 1, h_padding_shape)
 
-        if self.h_residual:
+        if residual:
             self.h_residual = nn.Conv2d(dim, dim, 1)
 
         if mask_type ==' A':
