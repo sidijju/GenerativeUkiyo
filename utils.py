@@ -80,3 +80,9 @@ def read_conf(conf, parser):
     parser.set_defaults(**defaults)
     args = parser.parse_args()
     return args
+
+def save_conf(args, output_dir):
+    with open(output_dir + "configs.ini", 'w') as f:
+        v = vars(args)
+        for item in v:
+            f.write("%s = %s\n" % (item, v[item]))

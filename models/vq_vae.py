@@ -25,9 +25,12 @@ class VQVAE:
             self.run_dir = f"train/vqvae/"
             self.progress_dir = self.run_dir + "progress/"
             self.prior_dir = self.run_dir + "prior_progress/"
+            
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
             make_dir(self.prior_dir)
+
+            save_conf(self.args, self.run_dir)
         
     def train(self):
     
