@@ -55,6 +55,7 @@ parser.add_argument('--latent', type=int, default=512, help='size of latent dime
 ### VQVAE
 
 parser.add_argument('--k', type=int, default=512, help='embedding dimensionality K for VQ-VAE')
+parser.add_argument('--prior_n', type=int, default=10, help='iterations to train PixelCNN prior for VQ-VAE')
 
 ### DDPM
 
