@@ -32,6 +32,8 @@ class VAE:
             self.progress_dir = self.run_dir + "progress/"
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
+
+            save_conf(self.args, self.run_dir)
         
     def train(self):
 

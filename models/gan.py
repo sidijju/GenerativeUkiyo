@@ -22,6 +22,8 @@ class GAN(ABC):
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
 
+            save_conf(self.args, self.run_dir)
+
     def save_train_data(self, d_losses_real, d_losses_fake, g_losses, d_net, g_net):
 
         # save models

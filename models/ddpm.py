@@ -24,6 +24,8 @@ class DDPM:
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
 
+            save_conf(self.args, self.run_dir)
+
     def save_train_data(self, losses, ddpm):
 
         # save models
