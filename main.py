@@ -83,7 +83,6 @@ else:
 if not args.test:
     random.seed(args.seed)
     torch.manual_seed(args.seed)
-    torch.use_deterministic_algorithms(True)
 
 if torch.cuda.is_available():
     print("Using cuda")
