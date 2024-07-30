@@ -25,7 +25,7 @@ class VQVAE:
             self.run_dir = f"train/vqvae/"
             self.progress_dir = self.run_dir + "progress/"
             self.prior_dir = self.run_dir + "prior_progress/"
-            
+
             make_dir(self.run_dir)
             make_dir(self.progress_dir)
             make_dir(self.prior_dir)
@@ -83,6 +83,7 @@ class VQVAE:
             plot_compare_batch(sample_batch, sample_batch_hat, self.progress_dir + f"comp-epoch:{epoch}")
 
         pixelcnn_losses = []
+        prior_optimizer = optim.Adam(vq_vae.pixel_cnn.parameters(), lr=self.args.prior_lr, betas=(0.5, 0.999))
 
         print("Training PixelCNN prior")
         for epoch in tqdm(range(self.args.prior_n)):
@@ -97,7 +98,7 @@ class VQVAE:
                 loss = F.cross_entropy(logits, labels)
 
                 loss.backward()
-                optimizer.step()
+                prior_optimizer.step()
 
                 #############################
                 ####   Metrics Tracking  ####
