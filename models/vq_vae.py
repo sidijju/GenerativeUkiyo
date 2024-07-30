@@ -124,7 +124,6 @@ class VQVAE:
         reconstructions = [loss[1] for loss in losses]
         dictionary_losses = [loss[2] for loss in losses]
         commitment_losses = [loss[3] for loss in losses]
-        pixelcnn_losses = [loss[0] for loss in pixelcnn_losses]
 
         filtered_totals = savgol_filter(totals, 51, 2)
         filtered_recs = savgol_filter(reconstructions, 51, 2)
