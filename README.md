@@ -1,5 +1,7 @@
 # Ukiyo-e Generative AI
 
+Check out the blog series related to this repository [here](https://www.sidijju.com/blog/Vision/)
+
 The art of woodblock printing has flourished since at least the 1700s in Japan. This repository is an attempt to experiment with how successful modern generative A.I. techniques are in recreating this timeless art form. 
 
 ## Datasets
