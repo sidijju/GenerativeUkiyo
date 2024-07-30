@@ -111,7 +111,9 @@ class VQVAE:
                         % (epoch, self.args.prior_n, i, len(self.dataloader), loss.item()))
                     
             sample_batch = vq_vae.sample(sample_batch.shape[0])
+            sample_uniform_batch = vq_vae.sample(sample_batch.shape[0], uniform=True)
             plot_batch(sample_batch, self.prior_dir + f"gen-epoch:{epoch}")
+            plot_batch(sample_uniform_batch, self.prior_dir + f"uniform-gen-epoch:{epoch}")
 
         print("### End Training Procedure ###")
         self.save_train_data(losses, pixelcnn_losses, vq_vae)
@@ -167,7 +169,7 @@ class VQVAE:
         batch = batch.to(self.args.device)
 
         with torch.no_grad():
-            fake_batch = vq_vae.sample()
+            fake_batch = vq_vae.sample(n)
 
         for i in range(n):
             plot_image(batch[i], path + f"/r_{i}")
@@ -181,7 +183,7 @@ class VectorQuantizedVariationalAutoEncoder(nn.Module):
         super(VectorQuantizedVariationalAutoEncoder, self).__init__()
 
         in_channels = args.channel_size
-        num_embeddings = args.k
+        self.num_embeddings = args.k
         self.embedding_dim = args.latent
 
         self.encoder = Encoder(in_channels, hidden_channels=hidden_channels)
@@ -191,15 +193,17 @@ class VectorQuantizedVariationalAutoEncoder(nn.Module):
             nn.BatchNorm2d(self.embedding_dim),
         )
 
-        self.vq = VectorQuantizer(num_embeddings, self.embedding_dim)
+        self.vq = VectorQuantizer(self.num_embeddings, self.embedding_dim)
 
         self.decoder = Decoder(self.embedding_dim, in_channels, hidden_channels=hidden_channels)
 
-        self.pixel_cnn = PixelCNN(dim=self.embedding_dim, k=num_embeddings)        
+        self.pixel_cnn = PixelCNN(dim=self.embedding_dim, k=self.num_embeddings)        
 
     @torch.inference_mode
-    def sample(self, n):
+    def sample(self, n, uniform=False):
         latents = self.pixel_cnn.sample(n)
+        if uniform:
+            latents = torch.randint_like(latents, high=self.num_embeddings)
         shape = (latents.shape[0], self.embedding_dim, *latents.shape[-2:])
         z_q = self.vq.select_embeddings(latents.view(-1), shape)
         g = self.decode(z_q)
