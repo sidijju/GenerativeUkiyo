@@ -92,10 +92,11 @@ class VQVAE:
                 batch = batch.to(self.args.device)
 
                 with torch.no_grad():
-                    _, labels, _, _ = vq_vae.encode(batch)
+                    _, latents, _, _ = vq_vae.encode(batch)
 
-                logits = vq_vae.pixel_cnn(labels)
-                loss = F.cross_entropy(logits, labels)
+                logits = vq_vae.pixel_cnn(latents)
+                logits = logits.permute(0, 2, 3, 1).contiguous()
+                loss = F.cross_entropy(logits.view(-1, self.args.k), latents.view(-1))
 
                 loss.backward()
                 prior_optimizer.step()
