@@ -33,7 +33,21 @@ class VQVAE:
             save_conf(self.args, self.run_dir)
         
     def train(self):
-    
+
+        print("### Begin Training Procedure ###")
+        print("Training VQ-VAE")
+        losses, vq_vae = self.train_vae()
+        print("Training PixelCNN prior")
+        pixel_cnn_losses, pixel_cnn = self.train_prior(vq_vae=vq_vae)
+        print("### End Training Procedure ###")
+        
+        self.save_train_data(losses, pixel_cnn_losses, vq_vae, pixel_cnn)
+
+    def train_vae(self):
+        sample_batch, _ = next(iter(self.dataloader))
+        sample_batch = sample_batch.to(self.args.device)
+        plot_batch(sample_batch, self.progress_dir + f"train_example")
+
         vq_vae = VectorQuantizedVariationalAutoEncoder(self.args)
         if self.args.checkpoint:
             vq_vae.load_state_dict(torch.load(self.args.checkpoint, map_location=self.args.device))
@@ -41,14 +55,8 @@ class VQVAE:
         vq_vae.to(self.args.device)
         optimizer = optim.Adam(vq_vae.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
-        sample_batch, _ = next(iter(self.dataloader))
-        sample_batch = sample_batch.to(self.args.device)
-        plot_batch(sample_batch, self.progress_dir + f"train_example")
-
         losses = []
 
-        print("### Begin Training Procedure ###")
-        print("Training VQ-VAE")
         for epoch in tqdm(range(self.args.n)):
             for i, batch in enumerate(self.dataloader, 0):
                 batch, _ = batch
@@ -81,11 +89,16 @@ class VQVAE:
                 sample_batch_hat, _, _ = vq_vae(sample_batch)
                 vq_vae.train()
             plot_compare_batch(sample_batch, sample_batch_hat, self.progress_dir + f"comp-epoch:{epoch}")
+        
+        return losses, vq_vae
+
+    def train_prior(self, vq_vae):  
+        prior = PixelCNN(dim=self.args.latent, k=self.args.k)
+        prior.to(self.args.device)   
+        prior_optimizer = optim.Adam(prior.parameters(), lr=self.args.prior_lr, betas=(0.5, 0.999))
 
         pixelcnn_losses = []
-        prior_optimizer = optim.Adam(vq_vae.pixel_cnn.parameters(), lr=self.args.prior_lr, betas=(0.5, 0.999))
 
-        print("Training PixelCNN prior")
         for epoch in tqdm(range(self.args.prior_n)):
             for i, batch in enumerate(self.dataloader, 0):
                 batch, _ = batch
@@ -94,7 +107,11 @@ class VQVAE:
                 with torch.no_grad():
                     _, latents, _, _ = vq_vae.encode(batch)
 
-                logits = vq_vae.pixel_cnn(latents)
+                prior.zero_grad()
+                # TODO remove
+                # latents = (b, 32, 32)
+                logits = prior(latents)
+                # logits = (b, K, 32, 32)
                 logits = logits.permute(0, 2, 3, 1).contiguous()
                 loss = F.cross_entropy(logits.view(-1, self.args.k), latents.view(-1))
 
@@ -111,15 +128,13 @@ class VQVAE:
                     print(f'[%d/%d][%d/%d]\tloss: %.4f'
                         % (epoch, self.args.prior_n, i, len(self.dataloader), loss.item()))
                     
-            sample_batch = vq_vae.sample(sample_batch.shape[0])
-            sample_uniform_batch = vq_vae.sample(sample_batch.shape[0], uniform=True)
-            plot_batch(sample_batch, self.prior_dir + f"gen-epoch:{epoch}")
-            plot_batch(sample_uniform_batch, self.prior_dir + f"uniform-gen-epoch:{epoch}")
+            sample_prior_batch, sample_uniform_prior_batch = self.sample(16, vq_vae, prior)
+            plot_batch(sample_prior_batch, self.prior_dir + f"gen-epoch:{epoch}")
+            plot_batch(sample_uniform_prior_batch, self.prior_dir + f"uniform-gen-epoch:{epoch}")
 
-        print("### End Training Procedure ###")
-        self.save_train_data(losses, pixelcnn_losses, vq_vae)
+        return pixelcnn_losses, prior
 
-    def save_train_data(self, losses, pixelcnn_losses, vq_vae):
+    def save_train_data(self, losses, pixelcnn_losses, vq_vae, pixel_cnn):
 
         totals = [loss[0] for loss in losses]
         reconstructions = [loss[1] for loss in losses]
@@ -134,6 +149,9 @@ class VQVAE:
 
         # save models
         torch.save(vq_vae.state_dict(), self.run_dir + '/vq_vae.pt')
+
+        # save models
+        torch.save(pixel_cnn.state_dict(), self.run_dir + '/pixel_cnn.pt')
 
         # save losses
         plt.cla()
@@ -159,17 +177,35 @@ class VQVAE:
         plt.legend()
         plt.savefig(self.run_dir + "prior_losses")
                 
+    @torch.inference_mode
+    def sample(self, n, vqvae, pixel_cnn):
+        latents = pixel_cnn.sample(n)
+        shape = (latents.shape[0], self.args.latent, *latents.shape[-2:])
+        z_q = vqvae.vq.select_embeddings(latents.view(-1), shape)
+        # (b, D, 32, 32)
+        g = vqvae.decode(z_q)
+
+        # uniform sampling
+        latents_uniform = torch.randint_like(latents, high=self.args.k)
+        z_q_uniform = vqvae.vq.select_embeddings(latents_uniform.view(-1), shape)
+        g_uniform = vqvae.decode(z_q_uniform)
+        return g, g_uniform
+    
     def generate(self, path, n = 5):
         print("### Begin Generating Images ###")
         vq_vae = VectorQuantizedVariationalAutoEncoder(self.args)
-        vq_vae.load_state_dict(torch.load(path + "/vq_vae.pt", map_location=self.args.device))
+        vq_vae.load_state_dict(torch.load(path + "vq_vae.pt", map_location=self.args.device))
         vq_vae.eval()
+
+        prior = PixelCNN(dim=self.args.latent, k=self.args.k)
+        prior.load_state_dict(torch.load(path + "pixel_cnn.pt", map_location=self.args.device))
+        prior.eval()
 
         batch, _ = next(iter(self.dataloader))
         batch = batch.to(self.args.device)
 
         with torch.no_grad():
-            fake_batch = vq_vae.sample(n)
+            fake_batch, _ = self.sample(n, vq_vae, prior)
 
         for i in range(n):
             plot_image(batch[i], path + f"/r_{i}")
@@ -195,23 +231,14 @@ class VectorQuantizedVariationalAutoEncoder(nn.Module):
 
         self.vq = VectorQuantizer(self.num_embeddings, self.embedding_dim)
 
-        self.decoder = Decoder(self.embedding_dim, in_channels, hidden_channels=hidden_channels)
-
-        self.pixel_cnn = PixelCNN(dim=self.embedding_dim, k=self.num_embeddings)        
-
-    @torch.inference_mode
-    def sample(self, n, uniform=False):
-        latents = self.pixel_cnn.sample(n)
-        if uniform:
-            latents = torch.randint_like(latents, high=self.num_embeddings)
-        shape = (latents.shape[0], self.embedding_dim, *latents.shape[-2:])
-        z_q = self.vq.select_embeddings(latents.view(-1), shape)
-        g = self.decode(z_q)
-        return g
+        self.decoder = Decoder(self.embedding_dim, in_channels, hidden_channels=hidden_channels)     
     
     def encode(self, x):
         z_e = self.encoder(x)
+        # TODO remove comments
+        # z_e = (b, D, 32, 32)
         z_q, z_q_indices, dictionary_loss, commitment_loss = self.vq(self.to_vq(z_e))
+        # z_q = (b, D, 32, 32)
         return z_q, z_q_indices, dictionary_loss, commitment_loss
     
     def decode(self, z_q):
@@ -317,13 +344,18 @@ class VectorQuantizer(nn.Module):
         return quantized
 
     def forward(self, x):
+        # TODO remove comments
+        # x = (b, D, 32, 32)
         x = x.permute(0, 2, 3, 1).contiguous()
+        # x = (b, 32, 32, D)
         flattened = x.view(-1, self.D)
 
         distances = torch.cdist(flattened,self.embeddings.weight)
         indices = torch.argmin(distances,dim=1) 
 
+        # indices = (b, 32, 32)
         quantized = self.select_embeddings(indices, x.shape)
+        # quantized = (b, 32, 32, D)
         indices = indices.reshape(x.shape[:-1])
 
         dictionary_loss = F.mse_loss(x.detach(), quantized)
@@ -331,5 +363,6 @@ class VectorQuantizer(nn.Module):
 
         quantized = x + (quantized - x).detach()
         quantized = quantized.permute(0, 3, 1, 2).contiguous()
+        # quantized = (b, D, 32, 32)
         
         return quantized, indices, dictionary_loss, commitment_loss
