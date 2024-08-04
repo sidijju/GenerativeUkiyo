@@ -141,41 +141,45 @@ class VQVAE:
         dictionary_losses = [loss[2] for loss in losses]
         commitment_losses = [loss[3] for loss in losses]
 
-        filtered_totals = savgol_filter(totals, 51, 2)
-        filtered_recs = savgol_filter(reconstructions, 51, 2)
-        filtered_dics = savgol_filter(dictionary_losses, 51, 2)
-        filtered_cs = savgol_filter(commitment_losses, 51, 2)
-        filtered_pix = savgol_filter(pixelcnn_losses, 51, 2)
+        if self.args.n > 0:
+            filtered_totals = savgol_filter(totals, 51, 2)
+            filtered_recs = savgol_filter(reconstructions, 51, 2)
+            filtered_dics = savgol_filter(dictionary_losses, 51, 2)
+            filtered_cs = savgol_filter(commitment_losses, 51, 2)
+
+            # save losses
+            plt.cla()
+            plt.yscale('log')
+            plt.figure(figsize=(10,5))
+            plt.title("Training Loss")
+            plt.plot(filtered_totals,label="total")
+            plt.plot(filtered_recs,label="reconstruction")
+            plt.plot(filtered_dics,label="vq")
+            plt.plot(filtered_cs,label="commitment")
+            plt.xlabel("Iterations")
+            plt.ylabel("Loss")
+            plt.legend()
+            plt.savefig(self.run_dir + "losses")
+
+        if self.args.prior_n > 0:
+            filtered_pix = savgol_filter(pixelcnn_losses, 51, 2)
+            
+             # save prior losses
+            plt.cla()
+            plt.yscale('log')
+            plt.figure(figsize=(10,5))
+            plt.title("Prior Training Loss")
+            plt.plot(filtered_pix)
+            plt.xlabel("Iterations")
+            plt.ylabel("Loss")
+            plt.legend()
+            plt.savefig(self.run_dir + "prior_losses")
 
         # save models
         torch.save(vq_vae.state_dict(), self.run_dir + '/vq_vae.pt')
 
         # save models
         torch.save(pixel_cnn.state_dict(), self.run_dir + '/pixel_cnn.pt')
-
-        # save losses
-        plt.cla()
-        plt.yscale('log')
-        plt.figure(figsize=(10,5))
-        plt.title("Training Loss")
-        plt.plot(filtered_totals,label="total")
-        plt.plot(filtered_recs,label="reconstruction")
-        plt.plot(filtered_dics,label="vq")
-        plt.plot(filtered_cs,label="commitment")
-        plt.xlabel("Iterations")
-        plt.ylabel("Loss")
-        plt.legend()
-        plt.savefig(self.run_dir + "losses")
-        # save prior losses
-        plt.cla()
-        plt.yscale('log')
-        plt.figure(figsize=(10,5))
-        plt.title("Prior Training Loss")
-        plt.plot(filtered_pix)
-        plt.xlabel("Iterations")
-        plt.ylabel("Loss")
-        plt.legend()
-        plt.savefig(self.run_dir + "prior_losses")
                 
     @torch.inference_mode
     def sample(self, n, vqvae, pixel_cnn):
