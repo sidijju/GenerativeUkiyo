@@ -30,6 +30,7 @@ parser.add_argument('--vq_vae', action='store_true', help='train vq-vae model')
 parser.add_argument('--ddpm', action='store_true', help='train denoising diffusion probablistic model')
 
 parser.add_argument('--checkpoint', type=str, default=None, help='train model from checkpoint')
+parser.add_argument('--checkpoint_prior', type=str, default=None, help='train prior model from checkpoint')
 parser.add_argument('--checkpoint_g', type=str, default=None, help='train generator model from checkpoint')
 parser.add_argument('--checkpoint_d', type=str, default=None, help='train discriminator model from checkpoint')
 
