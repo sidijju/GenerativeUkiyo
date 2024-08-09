@@ -63,8 +63,13 @@ class VQVAE:
                 batch = batch.to(self.args.device)
 
                 vq_vae.zero_grad()
-                batch_hat, dictionary_loss, commitment_loss = vq_vae(batch)
+
+                batch_hat, z_e, z_q = vq_vae(batch)
+
                 reproduction_loss = F.mse_loss(batch_hat, batch)
+                dictionary_loss = F.mse_loss(z_e.detach(), z_q)
+                commitment_loss = F.mse_loss(z_q.detach(), z_e)
+
                 loss = reproduction_loss + dictionary_loss + self.args.beta * commitment_loss
 
                 loss.backward()
@@ -93,7 +98,10 @@ class VQVAE:
         return losses, vq_vae
 
     def train_prior(self, vq_vae):  
-        prior = PixelCNN(dim=self.args.latent, k=self.args.k)
+        prior = PixelCNN()
+        if self.args.checkpoint_prior:
+            prior.load_state_dict(torch.load(self.args.checkpoint_prior, map_location=self.args.device))
+            print("Loaded prior checkpoint from", self.args.checkpoint_prior)
         prior.to(self.args.device)   
         prior_optimizer = optim.Adam(prior.parameters(), lr=self.args.prior_lr, betas=(0.5, 0.999))
 
@@ -105,16 +113,14 @@ class VQVAE:
                 batch = batch.to(self.args.device)
 
                 with torch.no_grad():
-                    _, latents, _, _ = vq_vae.encode(batch)
+                    latents = vq_vae.encode(batch)
+                    latents = latents.detach()
 
                 prior.zero_grad()
-                # TODO remove
-                # latents = (b, 32, 32)
                 logits = prior(latents)
-                # logits = (b, K, 32, 32)
                 logits = logits.permute(0, 2, 3, 1).contiguous()
-                loss = F.cross_entropy(logits.view(-1, self.args.k), latents.view(-1))
 
+                loss = F.cross_entropy(logits.view(-1, self.args.k), latents.view(-1))
                 loss.backward()
                 prior_optimizer.step()
 
@@ -163,7 +169,7 @@ class VQVAE:
 
         if self.args.prior_n > 0:
             filtered_pix = savgol_filter(pixelcnn_losses, 51, 2)
-            
+
              # save prior losses
             plt.cla()
             plt.yscale('log')
@@ -172,7 +178,6 @@ class VQVAE:
             plt.plot(filtered_pix)
             plt.xlabel("Iterations")
             plt.ylabel("Loss")
-            plt.legend()
             plt.savefig(self.run_dir + "prior_losses")
 
         # save models
@@ -184,15 +189,12 @@ class VQVAE:
     @torch.inference_mode
     def sample(self, n, vqvae, pixel_cnn):
         latents = pixel_cnn.sample(n)
-        shape = (latents.shape[0], self.args.latent, *latents.shape[-2:])
-        z_q = vqvae.vq.select_embeddings(latents.view(-1), shape)
-        # (b, D, 32, 32)
-        g = vqvae.decode(z_q)
+        g = vqvae.decode(latents.view(-1))
 
         # uniform sampling
         latents_uniform = torch.randint_like(latents, high=self.args.k)
-        z_q_uniform = vqvae.vq.select_embeddings(latents_uniform.view(-1), shape)
-        g_uniform = vqvae.decode(z_q_uniform)
+        g_uniform = vqvae.decode(latents_uniform.view(-1))
+
         return g, g_uniform
     
     def generate(self, path, n = 5):
@@ -201,7 +203,7 @@ class VQVAE:
         vq_vae.load_state_dict(torch.load(path + "vq_vae.pt", map_location=self.args.device))
         vq_vae.eval()
 
-        prior = PixelCNN(dim=self.args.latent, k=self.args.k)
+        prior = PixelCNN()
         prior.load_state_dict(torch.load(path + "pixel_cnn.pt", map_location=self.args.device))
         prior.eval()
 
@@ -215,124 +217,6 @@ class VQVAE:
             plot_image(batch[i], path + f"/r_{i}")
             plot_image(fake_batch[i], path + f"/f_{i}")
         print("### Done Generating Images ###")
-
-###############
-
-class VectorQuantizedVariationalAutoEncoder(nn.Module):
-    def __init__(self, args, hidden_channels=256):
-        super(VectorQuantizedVariationalAutoEncoder, self).__init__()
-
-        in_channels = args.channel_size
-        self.num_embeddings = args.k
-        self.embedding_dim = args.latent
-
-        self.encoder = Encoder(in_channels, hidden_channels=hidden_channels)
-
-        self.to_vq = nn.Sequential(
-            nn.Conv2d(hidden_channels, self.embedding_dim, 3, 1, 1),
-            nn.BatchNorm2d(self.embedding_dim),
-        )
-
-        self.vq = VectorQuantizer(self.num_embeddings, self.embedding_dim)
-
-        self.decoder = Decoder(self.embedding_dim, in_channels, hidden_channels=hidden_channels)     
-    
-    def encode(self, x):
-        z_e = self.encoder(x)
-        # TODO remove comments
-        # z_e = (b, D, 32, 32)
-        z_q, z_q_indices, dictionary_loss, commitment_loss = self.vq(self.to_vq(z_e))
-        # z_q = (b, D, 32, 32)
-        return z_q, z_q_indices, dictionary_loss, commitment_loss
-    
-    def decode(self, z_q):
-        x_hat = self.decoder(z_q)
-        return x_hat
-    
-    def forward(self, x):
-        z_q, _, dictionary_loss, commitment_loss = self.encode(x)
-        x_hat = self.decode(z_q)
-        return x_hat, dictionary_loss, commitment_loss
-    
-#########################
-
-class ResidualConvBlock(nn.Module):
-    def __init__(self, channels, hidden_channels):
-        super(ResidualConvBlock, self).__init__()
-
-        self.conv1 = nn.Conv2d(channels, hidden_channels, 3, 1, 1)
-        self.bn1 = nn.BatchNorm2d(hidden_channels)
-
-        self.conv2 = nn.Conv2d(hidden_channels, channels, 1)
-        self.bn2 = nn.BatchNorm2d(channels)
-
-    def forward(self, x):
-        h = self.bn1(self.conv1(F.relu(x)))
-        h = self.bn2(self.conv2(F.relu(h)))
-        return x + h
-
-class Encoder(nn.Module):
-    def __init__(self, 
-                 in_channels, 
-                 hidden_channels = 256,
-                 residual_hidden_channels = 64,
-                 ):
-        super(Encoder, self).__init__()
-
-        self.down1 = self.conv_block(in_channels, hidden_channels // 2)
-        self.down2 = self.conv_block(hidden_channels // 2, hidden_channels)
-        self.down3 = self.conv_block(hidden_channels, hidden_channels, kernels=3, stride=1)
-
-        self.res1 = ResidualConvBlock(hidden_channels, residual_hidden_channels)
-        self.res2 = ResidualConvBlock(hidden_channels, residual_hidden_channels)
-
-    def conv_block(self, in_channels, out_channels, kernels=4, stride=2):
-        return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernels, stride, 1),
-            nn.BatchNorm2d(out_channels),
-        )
-
-    def forward(self, x):
-        x = F.relu(self.down1(x))
-        x = F.relu(self.down2(x))
-        x = self.down3(x)
-        x = self.res1(x)
-        x = self.res2(x)
-        return x
-    
-class Decoder(nn.Module):
-    def __init__(self, 
-                 in_channels,
-                 out_channels,
-                 hidden_channels = 256,
-                 residual_hidden_channels = 64,
-                 ):
-        super(Decoder, self).__init__()
-
-        self.from_vq = nn.Sequential(
-            nn.Conv2d(in_channels, hidden_channels, 3, 1, 1),
-            nn.BatchNorm2d(hidden_channels),
-        )
-
-        self.res1 = ResidualConvBlock(hidden_channels, residual_hidden_channels)
-        self.res2 = ResidualConvBlock(hidden_channels, residual_hidden_channels)
-
-        self.up1 = self.conv_block(hidden_channels, hidden_channels // 2)
-        self.up2 = self.conv_block(hidden_channels // 2, out_channels)
-
-    def conv_block(self, in_channels, out_channels, kernels=4, stride=2):
-        return nn.Sequential(
-            nn.ConvTranspose2d(in_channels, out_channels, kernels, stride, 1),
-            nn.BatchNorm2d(out_channels),
-        )
-
-    def forward(self, x):
-        x = self.from_vq(x)
-        x = self.res1(x)
-        x = self.res2(x)
-        x = F.relu(self.up1(x))
-        x = F.sigmoid(self.up2(x))
-        return x
     
 class VectorQuantizer(nn.Module):
 
@@ -343,30 +227,96 @@ class VectorQuantizer(nn.Module):
         self.embeddings = nn.Embedding(K, D)
         self.embeddings.weight.data.uniform_(-1./K, 1./K)
 
-    def select_embeddings(self, indices, shape):
+    def embed(self, indices, shape):
         quantized = torch.index_select(self.embeddings.weight, 0, indices).view(shape)
+        quantized = quantized.permute(0, 3, 1, 2).contiguous()
         return quantized
 
     def forward(self, x):
-        # TODO remove comments
-        # x = (b, D, 32, 32)
         x = x.permute(0, 2, 3, 1).contiguous()
-        # x = (b, 32, 32, D)
         flattened = x.view(-1, self.D)
 
         distances = torch.cdist(flattened,self.embeddings.weight)
         indices = torch.argmin(distances,dim=1) 
-
-        # indices = (b, 32, 32)
-        quantized = self.select_embeddings(indices, x.shape)
-        # quantized = (b, 32, 32, D)
         indices = indices.reshape(x.shape[:-1])
 
-        dictionary_loss = F.mse_loss(x.detach(), quantized)
-        commitment_loss = F.mse_loss(quantized.detach(), x)
+        return indices
 
-        quantized = x + (quantized - x).detach()
-        quantized = quantized.permute(0, 3, 1, 2).contiguous()
-        # quantized = (b, D, 32, 32)
-        
-        return quantized, indices, dictionary_loss, commitment_loss
+class ResBlock(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.ReLU(True),
+            nn.Conv2d(dim, dim, 3, 1, 1),
+            nn.BatchNorm2d(dim),
+            nn.ReLU(True),
+            nn.Conv2d(dim, dim, 1),
+            nn.BatchNorm2d(dim)
+        )
+
+    def forward(self, x):
+        return x + self.block(x)
+
+
+class VectorQuantizedVariationalAutoEncoder(nn.Module):
+
+    def __init__(self, args, hidden_channels=256):
+        super().__init__()
+
+        input_dim = args.channel_size
+        dim = hidden_channels
+        K = args.k
+
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_dim, dim, 4, 2, 1),
+            nn.BatchNorm2d(dim),
+            nn.ReLU(True),
+            nn.Conv2d(dim, dim, 4, 2, 1),
+            ResBlock(dim),
+            ResBlock(dim),
+        )
+
+        self.vq = VectorQuantizer(K, dim)
+
+        self.decoder = nn.Sequential(
+            ResBlock(dim),
+            ResBlock(dim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(dim, dim, 4, 2, 1),
+            nn.BatchNorm2d(dim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(dim, input_dim, 4, 2, 1),
+            nn.Tanh()
+        )
+
+        self.apply(weights_init)
+
+    def encode(self, x):
+        z_e_x = self.encoder(x)
+        latents = self.vq(z_e_x)
+        return latents
+
+    def decode(self, latents):
+        z_q_x = self.vq.embed(latents, (-1, 32, 32, 256))
+        x_tilde = self.decoder(z_q_x)
+        return x_tilde
+
+    def forward(self, x):
+        z_e = self.encoder(x)
+        latents = self.vq(z_e).view(-1)
+        z_q = self.vq.embed(latents, (-1, 32, 32, 256))
+
+        # straight through gradient
+        st_z_q = z_e + (z_q - z_e).detach()
+
+        x_hat = self.decoder(st_z_q)
+        return x_hat, z_e, z_q
+    
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        try:
+            nn.init.xavier_uniform_(m.weight.data)
+            m.bias.data.fill_(0)
+        except AttributeError:
+            print("Skipping initialization of ", classname)
