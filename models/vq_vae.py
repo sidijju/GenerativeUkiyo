@@ -286,7 +286,7 @@ class VectorQuantizedVariationalAutoEncoder(nn.Module):
             nn.BatchNorm2d(dim),
             nn.ReLU(True),
             nn.ConvTranspose2d(dim, input_dim, 4, 2, 1),
-            nn.Tanh()
+            nn.Sigmoid()
         )
 
         self.apply(weights_init)
