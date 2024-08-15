@@ -1,7 +1,6 @@
 import torch
 import random
 import argparse
-from functools import partial
 from torch.utils.data import DataLoader
 
 from models.dc_gan import DCGAN
