@@ -26,13 +26,13 @@ class GatedMaskedConv2d(nn.Module):
         h_kernel_shape = (1, kernel // 2 + 1)
         h_padding_shape = (0, kernel // 2)
 
-        self.v_stack = nn.Conv2d(dim, dim * 2, v_kernel_shape, 1, v_padding_shape)
+        self.vert_stack = nn.Conv2d(dim, dim * 2, v_kernel_shape, 1, v_padding_shape)
 
-        self.v_to_h = nn.Conv2d(2 * dim, 2 * dim, 1)
+        self.vert_to_horiz = nn.Conv2d(2 * dim, 2 * dim, 1)
 
-        self.h_stack = nn.Conv2d(dim, dim * 2, h_kernel_shape, 1, h_padding_shape)
+        self.horiz_stack = nn.Conv2d(dim, dim * 2, h_kernel_shape, 1, h_padding_shape)
 
-        self.h_residual = nn.Conv2d(dim, dim, 1)
+        self.horiz_resid = nn.Conv2d(dim, dim, 1)
         
     def gate(self, x):
         x_f, x_g = x.chunk(2, dim=1)
@@ -40,18 +40,18 @@ class GatedMaskedConv2d(nn.Module):
 
     def forward(self, x_v, x_h):
         if self.mask_type == 'A':
-            self.v_stack.weight.data[:, :, -1].zero_()
-            self.h_stack.weight.data[:, :, :, -1].zero_()
+            self.vert_stack.weight.data[:, :, -1].zero_()
+            self.horiz_stack.weight.data[:, :, :, -1].zero_()
             
-        v = self.v_stack(x_v)
+        v = self.vert_stack(x_v)
         v = v[:, :, :x_v.shape[-1], :]
         v_out = self.gate(v)
 
-        h = self.h_stack(x_h)
+        h = self.horiz_stack(x_h)
         h = h[:, :, :, :x_h.shape[-2]]
-        v_to_h = self.v_to_h(v)
-        h_out = self.gate(h + v_to_h)
-        h_out = self.h_residual(h_out)
+        vert_to_horiz = self.vert_to_horiz(v)
+        h_out = self.gate(h + vert_to_horiz)
+        h_out = self.horiz_resid(h_out)
 
         if self.residual:
             h_out += x_h
@@ -82,9 +82,9 @@ class PixelCNN(nn.Module):
 
         # Add the output layer
         self.output_conv = nn.Sequential(
-            nn.Conv2d(dim, 512, 1),
+            nn.Conv2d(dim, 1024, 1),
             nn.ReLU(True),
-            nn.Conv2d(512, input_dim, 1)
+            nn.Conv2d(1024, input_dim, 1)
         )
 
         self.apply(weights_init)
