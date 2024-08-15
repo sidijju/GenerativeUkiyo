@@ -31,7 +31,7 @@ def make_dir(path):
 def plot_image(image, path):
     plt.cla()
     plt.axis('off')
-    new_image = to_512(scale_0_1(image)).permute(1, 2, 0).cpu()
+    new_image = to_512(image).permute(1, 2, 0).cpu()
     plt.imshow(new_image)
     plt.savefig(path, bbox_inches=0)
 
