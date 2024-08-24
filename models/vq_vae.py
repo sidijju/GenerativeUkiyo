@@ -4,6 +4,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from tqdm import tqdm
 from scipy.signal import savgol_filter
+from torch.utils.data import DataLoader
 
 from models.pixel_cnn import PixelCNN
 
@@ -15,11 +16,11 @@ class VQVAE:
 
     def __init__(self, 
                 args,
-                dataloader = None,
+                dataset
                 ):
         
         self.args = args
-        self.dataloader = dataloader
+        self.dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
 
         if not self.args.test:
             self.run_dir = f"train/vqvae/"

@@ -1,12 +1,12 @@
 import torch
 import random
 import argparse
-from torch.utils.data import DataLoader
 
 from models.dc_gan import DCGAN
 from models.vae import VAE
 from models.vq_vae import VQVAE
 from models.ddpm import DDPM
+from models.pro_gan import ProGAN
 from data.dataset import *
 from utils import read_conf
 
@@ -106,16 +106,14 @@ args.num_classes = len(dataset.labels_map)
 
 ###################
 
-dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
-
 if args.ddpm:
-    model = DDPM(args, dataloader)
+    model = DDPM(args, dataset)
 elif args.vae:
-    model = VAE(args, dataloader)
+    model = VAE(args, dataset)
 elif args.vq_vae:
-    model = VQVAE(args, dataloader)
+    model = VQVAE(args, dataset)
 else:
-    model = DCGAN(args, dataloader)
+    model = DCGAN(args, dataset)
 
 if args.test:
     model.generate(args.test, n=args.test_n)

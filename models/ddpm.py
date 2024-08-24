@@ -7,15 +7,16 @@ from einops.layers.torch import Rearrange
 from diffusers.optimization import get_cosine_schedule_with_warmup, get_constant_schedule
 import math
 from tqdm import tqdm
+from torch.utils.data import DataLoader
 
 class DDPM:
     def __init__(self,
                  args,
-                 dataloader = None,
+                 dataset
                  ):
         
         self.args = args
-        self.dataloader = dataloader
+        self.dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
         self.channel_size = args.channel_size
 
         if not self.args.test:

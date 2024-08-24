@@ -4,6 +4,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from datetime import datetime
 from scipy.signal import savgol_filter
+from torch.utils.data import DataLoader
 
 from utils import *
 
@@ -13,12 +14,12 @@ class VAE:
 
     def __init__(self, 
                 args,
-                dataloader = None,
+                dataset,
                 workers = 2,
                 ):
         
         self.args = args
-        self.dataloader = dataloader
+        self.dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
         self.workers = workers
         self.channel_size = args.channel_size
         self.latent_size = args.latent

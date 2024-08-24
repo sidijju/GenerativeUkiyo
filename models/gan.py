@@ -3,16 +3,17 @@ import torch
 from abc import ABC
 from utils import *
 from scipy.signal import savgol_filter
+from torch.utils.data import DataLoader
 
 class GAN(ABC):
 
     def __init__(self, 
                 args,
-                dataloader = None,
+                dataset
                 ):
         
         self.args = args
-        self.dataloader = dataloader
+        self.dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=True)
         self.channel_size = args.channel_size
         self.latent_size = args.latent
 
