@@ -152,8 +152,8 @@ class ProGAN(GAN):
             make_dir(self.progress_dir + f"res:{resolution}")
             alpha = 0
 
-            for epoch in tqdm(range(self.args.n), position=1, desc="Epoch"):
-                for i, batch in tqdm(enumerate(self.dataloader), position=2, desc="Batch"):
+            for epoch in tqdm(range(self.args.n), position=1, desc="Epoch", leave=False):
+                for i, batch in tqdm(enumerate(self.dataloader), position=2, desc="Batch", leave=False):
                     batch, _ = batch
                     batch = batch.to(self.args.device)
 
