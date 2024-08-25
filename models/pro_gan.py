@@ -211,7 +211,7 @@ class ProGAN(GAN):
                 if epoch % 5 == 0 or epoch == self.args.n-1:
                     with torch.no_grad():
                         g_net.eval()
-                        fake = g_net(fixed_latent).detach()
+                        fake = g_net(fixed_latent, p, 1).detach()
                         g_net.train()
                     plot_batch(fake, self.progress_dir + f"res:{resolution}/epoch:{epoch}")
 
