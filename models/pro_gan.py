@@ -200,7 +200,7 @@ class ProGAN(GAN):
                     ####   Metrics Tracking  ####
                     #############################
 
-                    if i % 100 == 0:
+                    if i % 1000 == 0:
                         print(f'[%d/%d][%d/%d]\td_loss: %.4f\tg_loss: %.4f\talpha: %.4f'
                             % (epoch, self.args.n, i, len(self.dataloader),
                             d_loss.item(), g_loss.item(), alpha))
