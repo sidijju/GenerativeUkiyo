@@ -29,19 +29,16 @@ class JapArtDataset(Dataset):
             self.img_names.append(f)
             self.labels.append(label)
 
-        if transform:
-            self.transform = transform
-        else:
-            transforms = [
+        if not transform:
+            transform = v2.Compose([
                 v2.ToDtype(torch.float32, scale=True),
                 v2.Resize(self.dim),
-            ]
-            if args.augment:
-                transforms += [
-                    v2.RandomHorizontalFlip()
-                ]
-                
-            self.transform =  v2.Compose(transforms)
+                v2.RandomHorizontalFlip(p=0.5) if args.augment else v2.Identity()
+            ])
+        self.set_transform(transform)
+
+    def set_transform(self, transform):
+        self.transform = transform
 
     def __len__(self):
         return len(self.img_names)
