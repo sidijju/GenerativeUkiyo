@@ -4,7 +4,32 @@ from torch.utils.data import Dataset
 from torchvision.transforms import v2
 from torchvision.io import read_image
 
-class JapArtDataset(Dataset):
+class TransformDataset(Dataset):
+
+    def __init__(self):
+        super().__init__()
+
+    def set_transform(self, transform):
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.img_names)
+    
+    def __getitem__(self, idx):
+        label = torch.tensor(self.labels[idx], dtype=torch.int64)
+        img = read_image(self.img_names[idx])
+
+        assert img.shape[0] <= 3
+        
+        c, _, _ = img.size()
+        if c < 3:
+            img = torch.cat((img, img, img), dim=0)
+        
+        img = self.transform(img)
+
+        return img, label
+
+class JapArtDataset(TransformDataset):
 
     def __init__(self, args, transform=None):
         self.img_dir = 'data/jap-art/'
@@ -36,26 +61,8 @@ class JapArtDataset(Dataset):
                 v2.RandomHorizontalFlip(p=0.5) if args.augment else v2.Identity()
             ])
         self.set_transform(transform)
-
-    def set_transform(self, transform):
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.img_names)
-
-    def __getitem__(self, idx):
-        label = torch.tensor(self.labels[idx], dtype=torch.int64)
-        img = read_image(self.img_names[idx])
-
-        assert img.shape[0] <= 3
-        if img.shape[0] < 3:
-            img = torch.cat((img, img, img), dim=0)
-
-        img = self.transform(img)
-
-        return img, label
     
-class FlickerFacesDataset(Dataset):
+class FlickerFacesDataset(TransformDataset):
 
     def __init__(self, args, transform=None):
         self.img_dir = 'data/ff/real_faces_128'
@@ -74,25 +81,13 @@ class FlickerFacesDataset(Dataset):
             self.img_names.append(f)
             self.labels.append(label)
 
-    def __len__(self):
-        return len(self.img_names)
-
-    def __getitem__(self, idx):
-        label = torch.tensor(self.labels[idx], dtype=torch.int64)
-        img = read_image(self.img_names[idx])
-
-        assert img.shape[0] <= 3
-
-        if self.transform:
-            img = self.transform(img)
-        else:            
-            c, _, _ = img.size()
-            if c < 3:
-                img = torch.cat((img, img, img), dim=0)
-            
+        if not transform:
             transform = v2.Compose([
                 v2.ToDtype(torch.float32, scale=True),
             ])
-            img = transform(img)
 
-        return img, label
+        self.set_transform(transform)
+
+    
+
+    
