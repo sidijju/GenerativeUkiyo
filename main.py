@@ -27,6 +27,7 @@ parser.add_argument('--log_dir', type=str, default=None, help='log dir for train
 parser.add_argument('--vae', action='store_true', help='train vae model')
 parser.add_argument('--vq_vae', action='store_true', help='train vq-vae model')
 parser.add_argument('--ddpm', action='store_true', help='train denoising diffusion probablistic model')
+parser.add_argument('--pro_gan', action='store_true', help='train progressive gan')
 
 parser.add_argument('--checkpoint', type=str, default=None, help='train model from checkpoint')
 parser.add_argument('--checkpoint_prior', type=str, default=None, help='train prior model from checkpoint')
@@ -66,6 +67,10 @@ parser.add_argument('--b_t', type=float, default=0.02, help='beta at timestep t 
 parser.add_argument('--fixed_large', default=False, action='store_true', help='used fixed large for posterior variance')
 parser.add_argument('--cosine_lr', default=False, action='store_true', help='use cosine learning rate schedule')
 
+### ProgressiveGAN
+
+parser.add_argument('--lambda_gp', type=int, default=10, help='lambda for Wasserstein gradient penalty loss')
+
 args = parser.parse_args()
 
 ##### Configs #####
@@ -76,6 +81,8 @@ elif args.vae:
     args = read_conf('models/configs/vae.conf', parser)
 elif args.vq_vae:
     args = read_conf('models/configs/vq_vae.conf', parser)
+elif args.pro_gan:
+    args = read_conf('models/configs/pro_gan.conf', parser)
 else:
     args = read_conf('models/configs/dc_gan.conf', parser)
 
@@ -112,6 +119,8 @@ elif args.vae:
     model = VAE(args, dataset)
 elif args.vq_vae:
     model = VQVAE(args, dataset)
+elif args.pro_gan:
+    model = ProGAN(args, dataset)
 else:
     model = DCGAN(args, dataset)
 
