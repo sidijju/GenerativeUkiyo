@@ -153,7 +153,7 @@ class ProGAN(GAN):
             alpha = 0
 
             for epoch in tqdm(range(self.args.n), position=1, desc="Epoch", leave=False):
-                for i, batch in tqdm(enumerate(self.dataloader), position=2, desc="Batch", leave=False):
+                for i, batch in enumerate(self.dataloader):
                     batch, _ = batch
                     batch = batch.to(self.args.device)
 
