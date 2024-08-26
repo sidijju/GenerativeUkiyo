@@ -120,7 +120,7 @@ elif args.vae:
 elif args.vq_vae:
     model = VQVAE(args, dataset)
 elif args.pro_gan:
-    model = ProGAN(args, dataset)
+    model = ProGAN(args)
 else:
     model = DCGAN(args, dataset)
 

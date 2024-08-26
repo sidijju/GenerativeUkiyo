@@ -10,18 +10,26 @@ from utils import *
 import math
 from torch.utils.data import DataLoader
 from scipy.signal import savgol_filter
+from data.dataset import JapArtDataset
+from accelerate import Accelerator
 
 ##### ProGAN #####
 
 class ProGAN(GAN):
 
     def __init__(self, 
-                args,
-                dataset
+                args
                 ):
-        super().__init__(args, dataset)
+        
+        self.args = args
 
-        self.dataset = dataset
+        if not self.args.test:
+            self.run_dir = f"train/progan-n={self.args.n}_lr={self.args.lr}_dim={self.args.dim}/"
+            self.progress_dir = self.run_dir + "progress/"
+            make_dir(self.run_dir)
+            make_dir(self.progress_dir)
+
+            save_conf(self.args, self.run_dir)
 
         def res_to_batch(res):
             ratio = args.dim / res
@@ -34,16 +42,16 @@ class ProGAN(GAN):
             
         self.resolutions = [4 * (2 ** i) for i in range(args.dim.bit_length() - 2)]
         self.batch_sizes = [res_to_batch(res) for res in self.resolutions]
+        self.dataloaders = [self.get_dataloader(res) for res in self.resolutions]
 
-    def set_dataloader(self, resolution):
+    def get_dataloader(self, resolution):
         transform = v2.Compose([
             v2.ToDtype(torch.float32, scale=True),
             v2.Resize(resolution),
             v2.RandomHorizontalFlip(p=0.5) if self.args.augment else v2.Identity(),
         ])
         batch_size = self.batch_sizes[int(math.log2(resolution / 4))]
-        self.dataset.set_transform(transform)
-        self.dataloader = DataLoader(self.dataset, batch_size=batch_size, shuffle=True)
+        return DataLoader(JapArtDataset(self.args, transform=transform), batch_size=batch_size, shuffle=True)
 
     def save_train_data(self, d_losses, g_losses, d_net, g_net):
 
@@ -95,7 +103,7 @@ class ProGAN(GAN):
         g_net.eval()
 
         noise = torch.randn(n, self.latent_size, 1, 1, device=self.args.device)
-        batch, _ = next(iter(self.dataloader))
+        batch, _ = next(iter(self.dataloaders[-1]))
         batch = batch.to(self.args.device)
 
         with torch.no_grad():
@@ -108,7 +116,7 @@ class ProGAN(GAN):
         
     def compute_gradient_penalty(self, d_net, batch, fake, p, alpha):
         B, C, H, W = batch.shape
-        beta = torch.rand((B, 1, 1, 1)).repeat(1, C, H, W).to(self.args.device)
+        beta = torch.rand((B, 1, 1, 1)).repeat(1, C, H, W).to(batch.get_device())
         interpolated_images = batch * beta + fake.detach() * (1 - beta)
         interpolated_images.requires_grad_(True)
         mixed_scores = d_net(interpolated_images, p, alpha)
@@ -124,22 +132,25 @@ class ProGAN(GAN):
         return torch.mean((norm - 1) ** 2)
     
     def train(self):
+        accelerator = Accelerator()
         
         d_net = Discriminator(self.args)
         if self.args.checkpoint_d:
-            d_net.load_state_dict(torch.load(self.args.checkpoint_d, map_location=self.args.device))
+            d_net.load_state_dict(torch.load(self.args.checkpoint_d, map_location=accelerator.device))
             print("Loaded discriminator checkpoint from", self.args.checkpoint_d)
-        d_net.to(self.args.device)
         d_optimizer = optim.Adam(d_net.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
         g_net = Generator(self.args)
         if self.args.checkpoint_g:
-            g_net.load_state_dict(torch.load(self.args.checkpoint_g, map_location=self.args.device))
+            g_net.load_state_dict(torch.load(self.args.checkpoint_g, map_location=accelerator.device))
             print("Loaded generator checkpoint from", self.args.checkpoint_g)
-        g_net.to(self.args.device)
         g_optimizer = optim.Adam(g_net.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
-        fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.args.device)
+        fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=accelerator.device)
+
+        d_net, g_net, d_optimizer, g_optimizer = accelerator.prepare(
+            d_net, g_net, d_optimizer, g_optimizer
+        )
 
         d_losses = []
         g_losses = []
@@ -147,20 +158,19 @@ class ProGAN(GAN):
         print("### Begin Training Procedure ###")
 
         for p, resolution in tqdm(enumerate(self.resolutions), position=0, desc=f"Progression"):
-            self.set_dataloader(resolution)
             make_dir(self.progress_dir + f"res:{resolution}")
+            self.dataloaders[p] = accelerator.prepare(self.dataloaders[p])
             alpha = 0
 
             for epoch in tqdm(range(self.args.n), position=1, desc="Epoch", leave=False):
-                for i, batch in enumerate(self.dataloader):
+                for i, batch in enumerate(self.dataloaders[p]):
                     batch, _ = batch
-                    batch = batch.to(self.args.device)
 
                     if epoch == 0:
                         plot_batch(batch, self.progress_dir + f"res:{resolution}_train_example")
 
                     # generate fake batch for training
-                    noise = torch.randn(batch.shape[0], self.latent_size, 1, 1, device=self.args.device)
+                    noise = torch.randn(batch.shape[0], self.latent_size, 1, 1, device=accelerator.device)
                     fake_batch = g_net(noise, p, alpha)
 
                     #############################
@@ -174,7 +184,7 @@ class ProGAN(GAN):
                     gp = self.compute_gradient_penalty(d_net, batch, fake_batch, p, alpha)
                     d_loss = -(torch.mean(dx) - torch.mean(dgz_1)) + self.args.lambda_gp * gp + (0.001 * torch.mean(dx ** 2))
 
-                    d_loss.backward()
+                    accelerator.backward(d_loss)
                     d_optimizer.step()
 
                     #############################
@@ -186,13 +196,13 @@ class ProGAN(GAN):
                     dgz_2 = d_net(fake_batch, p, alpha).view(-1)
                     g_loss = -torch.mean(dgz_2)
 
-                    g_loss.backward()
+                    accelerator.backward(g_loss)
                     g_optimizer.step()
 
                     #############################
 
                     # update alpha
-                    alpha += batch.shape[0] / (self.args.n * len(self.dataloader) * 0.5)
+                    alpha += batch.shape[0] / (self.args.n * len(self.dataloaders[p]) * 0.5)
                     alpha = min(alpha, 1)
 
                     #############################
@@ -201,13 +211,13 @@ class ProGAN(GAN):
 
                     if i % 1000 == 0:
                         print(f'[%d/%d][%d/%d]\td_loss: %.4f\tg_loss: %.4f\talpha: %.4f'
-                            % (epoch, self.args.n, i, len(self.dataloader),
+                            % (epoch, self.args.n, i, len(self.dataloaders[p]),
                             d_loss.item(), g_loss.item(), alpha))
 
                     d_losses.append(d_loss.item())
                     g_losses.append(g_loss.item())
 
-                if epoch % 5 == 0 or epoch == self.args.n-1:
+                if epoch % 2 == 0 or epoch == self.args.n-1:
                     with torch.no_grad():
                         g_net.eval()
                         fake = g_net(fixed_latent, p, 1).detach()
