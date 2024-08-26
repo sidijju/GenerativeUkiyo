@@ -13,8 +13,6 @@ from scipy.signal import savgol_filter
 from data.dataset import JapArtDataset
 from accelerate import Accelerator
 
-accelerator = Accelerator()
-
 ##### ProGAN #####
 
 class ProGAN(GAN):
@@ -45,6 +43,7 @@ class ProGAN(GAN):
         self.resolutions = [4 * (2 ** i) for i in range(args.dim.bit_length() - 2)]
         self.batch_sizes = [res_to_batch(res) for res in self.resolutions]
         self.dataloaders = [self.get_dataloader(res) for res in self.resolutions]
+        self.accelerator = Accelerator()
 
     def get_dataloader(self, resolution):
         transform = v2.Compose([
@@ -108,7 +107,7 @@ class ProGAN(GAN):
         batch, _ = next(iter(self.dataloaders[-1]))
 
         with torch.no_grad():
-            fake = accelerator.gather(g_net(noise, len(self.resolutions), 1))
+            fake = self.accelerator.gather(g_net(noise, len(self.resolutions), 1))
 
         for i in range(n):
             plot_image(batch[i], path + f"/r_{i}")
@@ -136,19 +135,19 @@ class ProGAN(GAN):
         
         d_net = Discriminator(self.args)
         if self.args.checkpoint_d:
-            d_net.load_state_dict(torch.load(self.args.checkpoint_d, map_location=accelerator.device))
+            d_net.load_state_dict(torch.load(self.args.checkpoint_d, map_location=self.accelerator.device))
             print("Loaded discriminator checkpoint from", self.args.checkpoint_d)
         d_optimizer = optim.Adam(d_net.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
         g_net = Generator(self.args)
         if self.args.checkpoint_g:
-            g_net.load_state_dict(torch.load(self.args.checkpoint_g, map_location=accelerator.device))
+            g_net.load_state_dict(torch.load(self.args.checkpoint_g, map_location=self.accelerator.device))
             print("Loaded generator checkpoint from", self.args.checkpoint_g)
         g_optimizer = optim.Adam(g_net.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
-        fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=accelerator.device)
+        fixed_latent = torch.randn(64, self.latent_size, 1, 1, device=self.accelerator.device)
 
-        d_net, g_net, d_optimizer, g_optimizer = accelerator.prepare(
+        d_net, g_net, d_optimizer, g_optimizer = self.accelerator.prepare(
             d_net, g_net, d_optimizer, g_optimizer
         )
 
@@ -159,7 +158,7 @@ class ProGAN(GAN):
 
         for p, resolution in tqdm(enumerate(self.resolutions), position=0, desc=f"Progression"):
             make_dir(self.progress_dir + f"res:{resolution}")
-            self.dataloaders[p] = accelerator.prepare(self.dataloaders[p])
+            self.dataloaders[p] = self.accelerator.prepare(self.dataloaders[p])
             alpha = 0
 
             for epoch in tqdm(range(self.args.n), position=1, desc="Epoch", leave=False):
@@ -170,7 +169,7 @@ class ProGAN(GAN):
                         plot_batch(batch, self.progress_dir + f"res:{resolution}_train_example")
 
                     # generate fake batch for training
-                    noise = torch.randn(batch.shape[0], self.latent_size, 1, 1, device=accelerator.device)
+                    noise = torch.randn(batch.shape[0], self.latent_size, 1, 1, device=self.accelerator.device)
                     fake_batch = g_net(noise, p, alpha)
 
                     #############################
@@ -184,7 +183,7 @@ class ProGAN(GAN):
                     gp = self.compute_gradient_penalty(d_net, batch, fake_batch, p, alpha)
                     d_loss = -(torch.mean(dx) - torch.mean(dgz_1)) + self.args.lambda_gp * gp + (0.001 * torch.mean(dx ** 2))
 
-                    accelerator.backward(d_loss)
+                    self.accelerator.backward(d_loss)
                     d_optimizer.step()
 
                     #############################
@@ -196,7 +195,7 @@ class ProGAN(GAN):
                     dgz_2 = d_net(fake_batch, p, alpha).view(-1)
                     g_loss = -torch.mean(dgz_2)
 
-                    accelerator.backward(g_loss)
+                    self.accelerator.backward(g_loss)
                     g_optimizer.step()
 
                     #############################
