@@ -13,6 +13,8 @@ from scipy.signal import savgol_filter
 from data.dataset import JapArtDataset
 from accelerate import Accelerator
 
+accelerator = Accelerator()
+
 ##### ProGAN #####
 
 class ProGAN(GAN):
@@ -104,10 +106,9 @@ class ProGAN(GAN):
 
         noise = torch.randn(n, self.latent_size, 1, 1, device=self.args.device)
         batch, _ = next(iter(self.dataloaders[-1]))
-        batch = batch.to(self.args.device)
 
         with torch.no_grad():
-            fake = g_net(noise, len(self.resolutions), 1)
+            fake = accelerator.gather(g_net(noise, len(self.resolutions), 1))
 
         for i in range(n):
             plot_image(batch[i], path + f"/r_{i}")
@@ -132,7 +133,6 @@ class ProGAN(GAN):
         return torch.mean((norm - 1) ** 2)
     
     def train(self):
-        accelerator = Accelerator()
         
         d_net = Discriminator(self.args)
         if self.args.checkpoint_d:
