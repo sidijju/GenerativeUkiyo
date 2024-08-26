@@ -57,6 +57,8 @@ class ProGAN(GAN):
     def save_train_data(self, d_losses, g_losses, d_net, g_net):
 
         # save models
+        d_net = self.accelerator.unwrap_model(d_net)
+        g_net = self.accelerator.unwrap_model(g_net)
         torch.save(d_net.state_dict(), self.run_dir + '/discriminator.pt')
         torch.save(g_net.state_dict(), self.run_dir + '/generator.pt')
 
@@ -97,22 +99,24 @@ class ProGAN(GAN):
         plt.savefig(self.run_dir + "d_losses")
 
     def generate(self, path, n=5):
-        print("### Begin Generating Images ###")
-        g_net = Generator(self.args, self.channel_size, self.latent_size)
-        g_net.load_state_dict(torch.load(path + "/generator.pt"))
-        g_net.to(self.args.device)
-        g_net.eval()
+        if self.accelerator.is_local_main_process:
+            print("### Begin Generating Images ###")
+            g_net = Generator(self.args, self.channel_size, self.latent_size)
+            g_net.load_state_dict(torch.load(path + "/generator.pt"))
+            g_net.to(self.args.device)
+            g_net.eval()
 
-        noise = torch.randn(n, self.latent_size, 1, 1, device=self.args.device)
-        batch, _ = next(iter(self.dataloaders[-1]))
+            noise = torch.randn(n, self.latent_size, 1, 1, device=self.args.device)
+            batch, _ = next(iter(self.dataloaders[-1]))
+            batch = batch.to(self.args.device)
 
-        with torch.no_grad():
-            fake = self.accelerator.gather(g_net(noise, len(self.resolutions), 1))
+            with torch.no_grad():
+                fake = g_net(noise, len(self.resolutions), 1)
 
-        for i in range(n):
-            plot_image(batch[i], path + f"/r_{i}")
-            plot_image(fake[i], path + f"/f_{i}")
-        print("### Done Generating Images ###")
+            for i in range(n):
+                plot_image(batch[i], path + f"/r_{i}")
+                plot_image(fake[i], path + f"/f_{i}")
+            print("### Done Generating Images ###")
         
     def compute_gradient_penalty(self, d_net, batch, fake, p, alpha):
         B, C, H, W = batch.shape
@@ -156,12 +160,12 @@ class ProGAN(GAN):
 
         print("### Begin Training Procedure ###")
 
-        for p, resolution in tqdm(enumerate(self.resolutions), position=0, desc=f"Progression"):
+        for p, resolution in tqdm(enumerate(self.resolutions), position=0, desc=f"Progression", disable=not self.accelerator.is_local_main_process):
             make_dir(self.progress_dir + f"res:{resolution}")
             self.dataloaders[p] = self.accelerator.prepare(self.dataloaders[p])
             alpha = 0
 
-            for epoch in tqdm(range(self.args.n), position=1, desc="Epoch", leave=False):
+            for epoch in tqdm(range(self.args.n), position=1, desc="Epoch", leave=False, disable=not self.accelerator.is_local_main_process):
                 for i, batch in enumerate(self.dataloaders[p]):
                     batch, _ = batch
 
@@ -209,14 +213,14 @@ class ProGAN(GAN):
                     #############################
 
                     if i % 1000 == 0:
-                        print(f'[%d/%d][%d/%d]\td_loss: %.4f\tg_loss: %.4f\talpha: %.4f'
+                        self.accelerator.print(f'[%d/%d][%d/%d]\td_loss: %.4f\tg_loss: %.4f\talpha: %.4f'
                             % (epoch, self.args.n, i, len(self.dataloaders[p]),
                             d_loss.item(), g_loss.item(), alpha))
 
                     d_losses.append(d_loss.item())
                     g_losses.append(g_loss.item())
 
-                if epoch % 2 == 0 or epoch == self.args.n-1:
+                if self.accelerator.is_local_main_process and epoch % 2 == 0 or epoch == self.args.n-1:
                     with torch.no_grad():
                         g_net.eval()
                         fake = g_net(fixed_latent, p, 1).detach()
@@ -224,6 +228,7 @@ class ProGAN(GAN):
                     plot_batch(fake, self.progress_dir + f"res:{resolution}/epoch:{epoch}")
 
         print("### End Training Procedure ###")
+        self.accelerator.wait_for_everyone()
         self.save_train_data(d_losses, g_losses, d_net, g_net)
                 
 ###############
