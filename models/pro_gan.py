@@ -192,7 +192,7 @@ class ProGAN(GAN):
                     #############################
 
                     # update alpha
-                    alpha += 1 / (self.args.n * len(self.dataloader) * 0.5)
+                    alpha += batch.shape[0] / (self.args.n * len(self.dataloader) * 0.5)
                     alpha = min(alpha, 1)
 
                     #############################
