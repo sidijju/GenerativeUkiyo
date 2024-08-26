@@ -147,7 +147,6 @@ class ProGAN(GAN):
         print("### Begin Training Procedure ###")
 
         for p, resolution in tqdm(enumerate(self.resolutions), position=0, desc=f"Progression"):
-            # print(f"\nSet Dataloader Resolution: {resolution}")
             self.set_dataloader(resolution)
             make_dir(self.progress_dir + f"res:{resolution}")
             alpha = 0
@@ -193,7 +192,7 @@ class ProGAN(GAN):
                     #############################
 
                     # update alpha
-                    alpha += batch.shape[0] / (self.args.n * len(self.dataloader) * 0.5)
+                    alpha += 1 / (self.args.n * len(self.dataloader) * 0.5)
                     alpha = min(alpha, 1)
 
                     #############################
@@ -301,6 +300,7 @@ class Generator(nn.Module):
 
         upscaled = self.out_blocks[p-1](upscaled)
         out = self.out_blocks[p](out)
+        
         return self.fade(upscaled, out, alpha)
     
 #########################
@@ -312,7 +312,7 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.args = args
 
-        hidden_dims = [int(args.latent / mult) for mult in dim_mults]
+        hidden_dims = [int(args.latent / mult) for mult in reversed(dim_mults)]
 
         self.progressive_blocks = nn.ModuleList([
             *[
@@ -322,9 +322,8 @@ class Discriminator(nn.Module):
 
         self.out_blocks = nn.ModuleList([
             *[
-                WSConv2d(args.channel_size, in_f, 1, 1, 0) for in_f in hidden_dims[:-1]
+                WSConv2d(args.channel_size, in_f, 1, 1, 0) for in_f in hidden_dims
             ],
-            WSConv2d(args.channel_size, args.latent, 1, 1, 0),
         ])
 
         self.downsample = nn.AvgPool2d(kernel_size=2, stride=2)
@@ -345,22 +344,22 @@ class Discriminator(nn.Module):
         return torch.cat([x, batch_statistics], dim=1)
     
     def forward(self, x, p, alpha):
-        out = F.leaky_relu(self.out_blocks[p](x), 0.2)
+        rev_p = len(self.progressive_blocks) - p
+        out = F.leaky_relu(self.out_blocks[rev_p](x), 0.2)
 
         if p == 0:
             out = self.minibatch_std(out)
             return self.map(out).view((out.shape[0], -1))
         
-        downscaled = F.leaky_relu(self.out_blocks[p-1](self.downsample(x)))
-        out = self.downsample(self.progressive_blocks[p](out))
+        downscaled = F.leaky_relu(self.out_blocks[rev_p + 1](self.downsample(x)))
+        out = self.downsample(self.progressive_blocks[rev_p](out))
         out = self.fade(downscaled, out, alpha)
-        
-        for i in range(p):
+
+        for i in range(rev_p + 1, len(self.progressive_blocks)):
             out = self.progressive_blocks[i](out)
-            out = self.downsample[i](out)
+            out = self.downsample(out)
 
         out = self.minibatch_std(out)
         return self.map(out).view((out.shape[0], -1))
     
 #########################
-
