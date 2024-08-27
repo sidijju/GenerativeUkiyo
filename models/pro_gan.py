@@ -126,12 +126,14 @@ class ProGAN(GAN):
         if self.args.checkpoint_d:
             d_net.load_state_dict(torch.load(self.args.checkpoint_d, map_location=self.args.device))
             print("Loaded discriminator checkpoint from", self.args.checkpoint_d)
+        d_net.to(self.args.device)
         d_optimizer = optim.Adam(d_net.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
         g_net = Generator(self.args)
         if self.args.checkpoint_g:
             g_net.load_state_dict(torch.load(self.args.checkpoint_g, map_location=self.args.device))
             print("Loaded generator checkpoint from", self.args.checkpoint_g)
+        g_net.to(self.args.device)
         g_optimizer = optim.Adam(g_net.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
 
         d_losses = []
