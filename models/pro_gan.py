@@ -30,17 +30,7 @@ class ProGAN(GAN):
             make_dir(self.progress_dir)
             save_conf(self.args, self.run_dir)
 
-        def res_to_batch(res):
-            ratio = args.dim / res
-            if ratio <= 2:
-                return 4
-            elif ratio <= 16:
-                return 8
-            else:
-                return 16
-
         self.resolutions = [4 * (2 ** i) for i in range(args.dim.bit_length() - 2)]
-        self.batch_sizes = [res_to_batch(res) for res in self.resolutions]
         self.dataloaders = [self.get_dataloader(res) for res in self.resolutions]
 
     def get_dataloader(self, resolution):
@@ -50,8 +40,7 @@ class ProGAN(GAN):
             v2.RandomHorizontalFlip(p=0.5) if self.args.augment else v2.Identity(),
             v2.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
-        batch_size = self.batch_sizes[int(math.log2(resolution / 4))]
-        return DataLoader(JapArtDataset(self.args, transform=transform), batch_size=batch_size, shuffle=True)
+        return DataLoader(JapArtDataset(self.args, transform=transform), batch_size=self.args.batchsize, shuffle=True)
 
     def save_train_data(self, d_losses, g_losses, d_net, g_net):
 
@@ -151,7 +140,7 @@ class ProGAN(GAN):
         fixed_latent = torch.randn(self.args.batchsize, self.args.latent, 1, 1, device=self.args.device)
 
         print("### Begin Training Procedure ###")
-        for p, resolution in tqdm(enumerate(self.resolutions, start), position=0, desc=f"Progression"):
+        for p, resolution in tqdm(enumerate(self.resolutions), position=0, desc=f"Progression"):
             make_dir(self.progress_dir + f"res_{resolution}/")
             alpha = 0
             
@@ -216,7 +205,7 @@ class ProGAN(GAN):
                 if epoch % 2 == 0 or epoch == self.args.n-1:
                     with torch.no_grad():
                         g_net.eval()
-                        fake = g_net(fixed_latent[:self.batch_sizes[p]], p, 1).detach()
+                        fake = g_net(fixed_latent, p, 1).detach()
                         g_net.train()
                     plot_batch(fake, self.progress_dir + f"res_{resolution}/epoch_{epoch}")
 
