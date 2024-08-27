@@ -256,8 +256,8 @@ class MiniBatchStdDev(nn.Module):
         self.group_size = group_size
     
     def forward(self, x):
-        B, C, H, W = x.shape 
-        G = min(self.group_size, B)
+        B, C, H, W = x.shape
+        G = min(self.group_size, B) if B % G == 0 else 1
         
         y = x.view(G, -1, C, H, W)
         
