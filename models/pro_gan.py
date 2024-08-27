@@ -7,7 +7,6 @@ from torchvision.transforms import v2
 from tqdm import tqdm
 from models.gan import GAN
 from utils import *
-import math
 from torch.utils.data import DataLoader
 from scipy.signal import savgol_filter
 from data.dataset import JapArtDataset
@@ -149,6 +148,7 @@ class ProGAN(GAN):
             for epoch in tqdm(range(self.args.n), position=1, desc="Epoch", leave=False):
                 for i, batch in enumerate(self.dataloaders[p]):
                     batch, _ = batch
+                    batch = batch.to(self.args.device)
 
                     if epoch == 0:
                         plot_batch(batch, self.progress_dir + f"res_{resolution}_train_example")
