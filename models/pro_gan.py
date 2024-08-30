@@ -86,7 +86,7 @@ class ProGAN(GAN):
     def generate(self, path, n=5):
         print("### Begin Generating Images ###")
         g_net = Generator(self.args)
-        g_net.load_state_dict(torch.load(path + "/generator.pt"))
+        g_net.load_state_dict(torch.load(path + "/generator.pt", map_location=torch.device(self.args.device)))
         g_net.to(self.args.device)
         g_net.eval()
 
@@ -95,11 +95,11 @@ class ProGAN(GAN):
         batch = batch.to(self.args.device)
 
         with torch.no_grad():
-            fake = g_net(noise, len(self.resolutions), 1)
+            fake = g_net(noise, len(self.resolutions)-1, 1)
 
         for i in range(n):
-            plot_image(batch[i], path + f"/r_{i}")
-            plot_image(fake[i], path + f"/f_{i}")
+            plot_image((batch[i] + 1)/2, path + f"/r_{i}")
+            plot_image((fake[i] + 1)/2, path + f"/f_{i}")
         print("### Done Generating Images ###")
         
     def compute_gradient_penalty(self, d_net, batch, fake, p, alpha):
@@ -399,7 +399,6 @@ class Discriminator(nn.Module):
                     downsampled = self.in_blocks[rev_p + 1](self.downsample(x))
                     out = self.fade(downsampled, out, alpha)
 
-        # out = out.view((out.shape[0], -1))
         out = self.linear(out)
         return out
     
