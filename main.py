@@ -7,6 +7,7 @@ from models.vae import VAE
 from models.vq_vae import VQVAE
 from models.ddpm import DDPM
 from models.pro_gan import ProGAN
+from models.style_gan import StyleGAN
 from data.dataset import *
 from utils import read_conf
 
@@ -28,6 +29,7 @@ parser.add_argument('--vae', action='store_true', help='train vae model')
 parser.add_argument('--vq_vae', action='store_true', help='train vq-vae model')
 parser.add_argument('--ddpm', action='store_true', help='train denoising diffusion probablistic model')
 parser.add_argument('--pro_gan', action='store_true', help='train progressive gan')
+parser.add_argument('--style_gan', action='store_true', help='train style gan')
 
 parser.add_argument('--checkpoint', type=str, default=None, help='train model from checkpoint')
 parser.add_argument('--checkpoint_prior', type=str, default=None, help='train prior model from checkpoint')
@@ -71,6 +73,10 @@ parser.add_argument('--cosine_lr', default=False, action='store_true', help='use
 
 parser.add_argument('--lambda_gp', type=int, default=10, help='lambda for Wasserstein gradient penalty loss')
 
+### StyleGAN
+
+parser.add_argument('--w_latent', type=int, default=512, help='latent size for style input in StyleGAN')
+
 args = parser.parse_args()
 
 ##### Configs #####
@@ -83,6 +89,8 @@ elif args.vq_vae:
     args = read_conf('models/configs/vq_vae.conf', parser)
 elif args.pro_gan:
     args = read_conf('models/configs/pro_gan.conf', parser)
+elif args.style_gan:
+    args = read_conf('models/configs/style_gan.conf', parser)
 else:
     args = read_conf('models/configs/dc_gan.conf', parser)
 
@@ -121,6 +129,8 @@ elif args.vq_vae:
     model = VQVAE(args, dataset)
 elif args.pro_gan:
     model = ProGAN(args)
+elif args.style_gan:
+    model = StyleGAN(args)
 else:
     model = DCGAN(args, dataset)
 
