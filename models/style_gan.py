@@ -33,7 +33,7 @@ class StyleGAN(ProGAN):
         g_net.to(self.args.device)
         g_net.eval()
 
-        noise = torch.randn(n, self.args.latent, 1, 1, device=self.args.device)
+        noise = torch.randn(n, self.args.latent, device=self.args.device)
         batch, _ = next(iter(self.dataloaders[-1]))
         batch = batch.to(self.args.device)
 
@@ -64,7 +64,7 @@ class StyleGAN(ProGAN):
         d_losses = []
         g_losses = []
 
-        fixed_latent = torch.randn(self.args.batchsize, self.args.latent, 1, 1, device=self.args.device)
+        fixed_latent = torch.randn(self.args.batchsize, self.args.latent, device=self.args.device)
 
         print("### Begin Training Procedure ###")
         for p, resolution in tqdm(enumerate(self.resolutions), position=0, desc=f"Progression"):
