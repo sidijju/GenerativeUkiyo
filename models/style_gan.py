@@ -23,7 +23,7 @@ class StyleGAN(ProGAN):
             make_dir(self.progress_dir)
             save_conf(self.args, self.run_dir)
 
-        self.resolutions = [8 * (2 ** i) for i in range(args.dim.bit_length() - 2)]
+        self.resolutions = [8 * (2 ** i) for i in range(args.dim.bit_length() - 3)]
         self.dataloaders = [self.get_dataloader(res) for res in self.resolutions]
 
     def generate(self, path, n=5):
