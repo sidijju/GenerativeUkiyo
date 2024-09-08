@@ -59,7 +59,17 @@ class StyleGAN(ProGAN):
             g_net.load_state_dict(torch.load(self.args.checkpoint_g, map_location=self.args.device))
             print("Loaded generator checkpoint from", self.args.checkpoint_g)
         g_net.to(self.args.device)
-        g_optimizer = optim.Adam(g_net.parameters(), lr=self.args.lr, betas=(0.5, 0.999))
+
+        map_params = g_net.map.parameters()
+        base_params = list(g_net.init_block.parameters())
+        base_params += list(g_net.progressive_blocks.parameters())
+        base_params += list(g_net.out_blocks.parameters())
+        base_params += [g_net.starting_constant]
+
+        g_optimizer = optim.Adam([
+            {'params': base_params},
+            {'params': map_params, 'lr': self.args.lr * .01}
+            ], lr=self.args.lr, betas=(0.5, 0.999))
 
         d_losses = []
         g_losses = []
@@ -202,7 +212,7 @@ class AdaptiveInstanceNormalization(nn.Module):
 class NoiseInput(nn.Module):
     def __init__(self, channels):
         super().__init__()
-        self.weight = nn.Parameter(torch.ones(1, channels, 1, 1))
+        self.weight = nn.Parameter(torch.zeros(1, channels, 1, 1))
 
     def forward(self, x):
         noise = torch.randn((x.shape[0], 1, x.shape[2], x.shape[3]), device=x.device)
@@ -222,6 +232,21 @@ class GeneratorBlock(nn.Module):
         x = self.adain1(F.leaky_relu(self.noise1(self.conv1(x)), 0.2), w)
         x = self.adain2(F.leaky_relu(self.noise2(self.conv2(x)), 0.2), w)
         return x
+    
+class InitGeneratorBlock(nn.Module):
+    def __init__(self, in_channels, w_dim):
+        super(InitGeneratorBlock, self).__init__()
+        
+        self.conv = WSConv2d(in_channels, in_channels)
+        self.noise1 = NoiseInput(in_channels)
+        self.noise2 = NoiseInput(in_channels)
+        self.adain1 = AdaptiveInstanceNormalization(in_channels, w_dim)
+        self.adain2 = AdaptiveInstanceNormalization(in_channels, w_dim)
+
+    def forward(self, x, w):
+        x = self.adain1(F.leaky_relu(self.noise1(x)), w)
+        x = self.adain2(F.leaky_relu(self.noise2(self.conv(x))), w)
+        return x
 
 class Generator(nn.Module):
     def __init__(self, args, dim_mults = [1, 1, 1, 2, 4, 4]):
@@ -231,11 +256,7 @@ class Generator(nn.Module):
         self.map = NoiseMappingNetwork(args)
 
         self.starting_constant = nn.Parameter(torch.ones((1, args.latent, 8, 8)))
-        self.init_noise1 = NoiseInput(args.latent)
-        self.init_adain_1 = AdaptiveInstanceNormalization(args.latent, args.w_latent)
-        self.init_noise2 = NoiseInput(args.latent)
-        self.init_adain_2 = AdaptiveInstanceNormalization(args.latent, args.w_latent)
-        self.init_conv = WSConv2d(args.latent, args.latent)
+        self.init_block = InitGeneratorBlock(args.latent, args.w_latent)
 
         hidden_dims = [int(args.latent / mult) for mult in dim_mults]
 
@@ -255,9 +276,8 @@ class Generator(nn.Module):
         return alpha * higher + (1 - alpha) * lower
 
     def forward(self, z, p, alpha):
-        w = self.map(z)
-        x = self.init_adain_1(self.init_noise1(self.starting_constant), w)
-        out = self.init_adain_2(self.init_noise2(self.init_conv(x)), w)
+        w = self.map(F.normalize(z, dim=1))
+        out = self.init_block(self.starting_constant, w)
 
         if p == 0:
             return self.out_blocks[0](out)
