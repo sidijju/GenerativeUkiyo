@@ -115,7 +115,6 @@ class StyleGAN(ProGAN):
 
                     g_net.zero_grad()
 
-                    fake_batch = g_net(noise, p, alpha)
                     dgz_2 = d_net(fake_batch, p, alpha).view(-1)
                     g_loss = -torch.mean(dgz_2)
 
