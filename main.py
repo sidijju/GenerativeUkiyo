@@ -57,7 +57,7 @@ parser.add_argument('--latent', type=int, default=512, help='size of latent dime
 
 ### VQVAE
 
-parser.add_argument('--k', type=int, default=512, help='embedding dimensionality K for VQ-VAE')
+parser.add_argument('--k', type=int, default=512, help='embedding dimensionality K for VQ-VAE. overloaded as number of D updates for GAN')
 parser.add_argument('--prior_n', type=int, default=10, help='iterations to train PixelCNN prior for VQ-VAE')
 parser.add_argument('--prior_lr', type=float, default=1e-06, help='lr to train PixelCNN prior for VQ-VAE')
 
@@ -76,6 +76,7 @@ parser.add_argument('--lambda_gp', type=int, default=10, help='lambda for Wasser
 ### StyleGAN
 
 parser.add_argument('--w_latent', type=int, default=512, help='latent size for style input in StyleGAN')
+
 
 args = parser.parse_args()
 
