@@ -45,6 +45,31 @@ class StyleGAN(ProGAN):
             plot_image((fake[i] + 1)/2, path + f"/f_{i}")
         print("### Done Generating Images ###")
 
+    def generator_update(self, g_net, d_net, g_optimizer, fake_batch, p, alpha):
+        g_net.zero_grad()
+
+        dgz_2 = d_net(fake_batch, p, alpha).view(-1)
+        g_loss = -torch.mean(dgz_2)
+
+        g_loss.backward()
+        g_optimizer.step()
+
+        return g_loss
+
+    def discriminator_update(self, d_net, d_optimizer, batch, fake_batch, p, alpha):
+        d_net.zero_grad()
+        dx = d_net(batch, p, alpha).view(-1)
+        dgz_1 = d_net(fake_batch.detach(), p, alpha).view(-1)
+        gp = self.compute_gradient_penalty(d_net, batch, fake_batch, p, alpha)
+        d_loss = torch.mean(dgz_1) - torch.mean(dx)
+        d_loss += self.args.lambda_gp * gp
+        d_loss += 0.001 * torch.mean(dx ** 2)
+
+        d_loss.backward()
+        d_optimizer.step()
+
+        return d_loss
+
     def train(self):
         
         d_net = Discriminator(self.args)
@@ -91,37 +116,11 @@ class StyleGAN(ProGAN):
 
                     # latent for training
                     noise = torch.randn(batch.shape[0], self.args.latent, device=self.args.device)
-
-                    #############################
-                    #### Train Discriminator ####
-                    #############################
-
-                    d_net.zero_grad()
-
                     fake_batch = g_net(noise, p, alpha)
-                    dx = d_net(batch, p, alpha).view(-1)
-                    dgz_1 = d_net(fake_batch.detach(), p, alpha).view(-1)
-                    gp = self.compute_gradient_penalty(d_net, batch, fake_batch, p, alpha)
-                    d_loss = torch.mean(dgz_1) - torch.mean(dx)
-                    d_loss += self.args.lambda_gp * gp
-                    d_loss += 0.001 * torch.mean(dx ** 2)
-
-                    d_loss.backward()
-                    d_optimizer.step()
-
-                    #############################
-                    ####   Train Generator   ####
-                    #############################
-
-                    g_net.zero_grad()
-
-                    dgz_2 = d_net(fake_batch, p, alpha).view(-1)
-                    g_loss = -torch.mean(dgz_2)
-
-                    g_loss.backward()
-                    g_optimizer.step()
-
-                    #############################
+                    
+                    for _ in range(self.args.k):
+                        d_loss = self.discriminator_update(d_net, d_optimizer, batch, fake_batch, p, alpha)
+                    g_loss = self.generator_update(g_net, d_net, g_optimizer, fake_batch, p, alpha)
 
                     # update alpha
                     alpha += 2 / (self.args.n * len(self.dataloaders[p]))
@@ -243,8 +242,8 @@ class InitGeneratorBlock(nn.Module):
         self.adain2 = AdaptiveInstanceNormalization(in_channels, w_dim)
 
     def forward(self, x, w):
-        x = self.adain1(F.leaky_relu(self.noise1(x)), w)
-        x = self.adain2(F.leaky_relu(self.noise2(self.conv(x))), w)
+        x = self.adain1(F.leaky_relu(self.noise1(x), 0.2), w)
+        x = self.adain2(F.leaky_relu(self.noise2(self.conv(x)), 0.2), w)
         return x
 
 class Generator(nn.Module):
